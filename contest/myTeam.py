@@ -45,51 +45,6 @@ def createTeam(firstIndex, secondIndex, isRed,
 # Agents #
 ##########
 
-class DummyAgent(CaptureAgent):
-  """
-  A Dummy agent to serve as an example of the necessary agent structure.
-  You should look at baselineTeam.py for more details about how to
-  create an agent as this is the bare minimum.
-  """
-
-  def registerInitialState(self, gameState):
-    """
-    This method handles the initial setup of the
-    agent to populate useful fields (such as what team
-    we're on).
-
-    A distanceCalculator instance caches the maze distances
-    between each pair of positions, so your agents can use:
-    self.distancer.getDistance(p1, p2)
-
-    IMPORTANT: This method may run for at most 15 seconds.
-    """
-
-    '''
-    Make sure you do not delete the following line. If you would like to
-    use Manhattan distances instead of maze distances in order to save
-    on initialization time, please take a look at
-    CaptureAgent.registerInitialState in captureAgents.py.
-    '''
-    CaptureAgent.registerInitialState(self, gameState)
-
-    '''
-    Your initialization code goes here, if you need any.
-    '''
-
-
-  def chooseAction(self, gameState):
-    """
-    Picks among actions randomly.
-    """
-    actions = gameState.getLegalActions(self.index)
-
-    '''
-    You should change this in your own agent.
-    '''
-
-    return random.choice(actions)
-
 class BaseCaptureAgent(CaptureAgent):
 
   def registerInitialState(self, gameState):
@@ -113,14 +68,8 @@ class BaseCaptureAgent(CaptureAgent):
     '''
     CaptureAgent.registerInitialState(self, gameState)
 
-    #Set our agents
-    if(isOnRedTeam):
-      ourAgents = gameState.getRedTeamIndices()
-      opponentAgents = gameState.getBlueTeamIndices()
-    else: 
-      ourAgents = gameState.getBlueTeamIndices()
-      opponentAgents = ameState.getRedTeamIndices()
-
+    self.ourTeamAgents = gameState.getTeam()
+    self.opponentAgents = gameState.getOpponents()
 
 
     '''
@@ -183,7 +132,7 @@ class BaseCaptureAgent(CaptureAgent):
       return self.evaluationFunction(gameState)
 
     # When it's our turn
-    if((depthCounter%numAgents) in  == self.index): 
+    if((depthCounter%numAgents) in ourTeamAgents): 
 
       pacmanSuccessors = [] #list of GameStates
       pacmanSuccessorsEvalScores = [] #list of GameStates returned scores
@@ -199,7 +148,7 @@ class BaseCaptureAgent(CaptureAgent):
       return max(pacmanSuccessorsEvalScores)
 
 
-    #Other 
+    #Other teams turn
     else: 
 
       ghostNumber = (depthCounter%numAgents) #which ghost is it?
@@ -218,19 +167,12 @@ class BaseCaptureAgent(CaptureAgent):
   
       
 
-  def betterEvaluationFunction(currentGameState): 
+  def evaluationFunction(currentGameState): 
 
-    """
-      Your extreme ghost-hunting, pellet-nabbing, food-gobbling, unstoppable
-      evaluation function (question 5).
-
-      DESCRIPTION: This evaluation function looks at the current position of pacman,
-      the current positions of all the food pellets, the current position of all of the ghosts,
-      and the current position of all of the food capsules. The function calculates a food score,
-      a capsule score, and the distances to each ghost.
-    """
     currentPos = currentGameState.getPacmanPosition()
     currentFood = currentGameState.getFood()
+
+    #This doesn't make sense
     currentGhostStates = currentGameState.getGhostStates()
     currentScaredTimes = [ghostState.scaredTimer for ghostState in currentGhostStates]
     currentCapsules = currentGameState.getCapsules()
@@ -322,7 +264,8 @@ class BaseCaptureAgent(CaptureAgent):
   #  Helper Methods  #
   ####################
 
-  def getOurAgents(self)
+
+
 
 
 

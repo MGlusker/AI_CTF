@@ -97,34 +97,56 @@ class BaseCaptureAgent(CaptureAgent):
       legal moves.
     """
 
-    #CHANGE CODE TO EVALUATE WHO'S TURN IT IS AT BEGINNING
+    #Always our turn at beginning our expectimax
 
-    pacmanSuccessors = [] #list of GameStates
-    pacmanSuccessorsEvalScores = [] #list of GameStates returned scores
+    # list to keep track of agents
+    self.expectimaxAgents = []
+    # storing our team as indices 0 and 1
+    self.expectimaxAgents[0:1] = gameState.getTeam()
+    # storing opponents as indices 2 and 3
+    self.expectimaxAgents[2:3] = gameState.getOpponents()
 
-    pacmanLegalActions = gameState.getLegalActions(self.index)
+    ourSuccessors = [] #list of our successor GameStates
+    ourSuccessorsEvalScores = [] #list of our GameStates' returned scores
 
-    for action in pacmanLegalActions:
-      pacmanSuccessors.append(gameState.generateSuccessor(self.index, action))
+
+    ourLegalActions = gameState.getLegalActions(self.expectimaxAgents[0])
+
+    for action in ourLegalActions:
+      ourSuccessors.append(gameState.generateSuccessor(self.expectimaxAgents[0], action))
     
-    for child in pacmanSuccessors:
-      pacmanSuccessorsEvalScores.append(self.getActionRecursiveHelper(child, 1))
+    for child in ourSuccessors:
+      ourSuccessorsEvalScores.append(self.getActionRecursiveHelper(child, 1))
 
-    return pacmanLegalActions[pacmanSuccessorsEvalScores.index(max(pacmanSuccessorsEvalScores))]
+    return pacmanLegalActions[ourSuccessorsEvalScores.index(max(pacmanSuccessorsEvalScores))]
    
 
 
   def getActionRecursiveHelper(self, gameState, depthCounter):
 
+    
+    ## to do
+    # particle filtering so we can get legal actions
+    # make it so expectimax doesn't simply return average of all possible actions
+    # need a better evaluation function that actually works 
+    # alpha / beta?? 
+
+
+
     NUM_AGENTS = 4
-    DEPTH = 5
-    #cutoff test
 
-    #*******
-    #NEED TO CHANGE for variable depth 
-    #*******
+    #In terms of moves, not plies
+    DEPTH = 20 
+    
+    agentIndex = depthCounter%NUM_AGENTS
 
-    if((DEPTH*numAgents) == depthCounter):
+    ############################################################
+    # NEED TO CHANGE depth variable if we want variable depth  #
+    ############################################################
+
+
+    #When we hit our depth limit AKA cutoff test
+    if(DEPTH == depthCounter):
       return self.evaluationFunction(gameState)
 
     #implement a terminal test
@@ -132,38 +154,38 @@ class BaseCaptureAgent(CaptureAgent):
       return self.evaluationFunction(gameState)
 
     # When it's our turn
-    if((depthCounter%numAgents) in ourTeamAgents): 
+    # This may need to be changed based on whose turn it
+    if(agentIndex == 0 or agentIndex == 1): 
 
-      pacmanSuccessors = [] #list of GameStates
-      pacmanSuccessorsEvalScores = [] #list of GameStates returned scores
+      ourSuccessors = [] #list of GameStates
+      ourSuccessorsEvalScores = [] #list of GameStates' returned scores
 
-      pacmanLegalActions = gameState.getLegalActions(self.index)
+      ourLegalActions = gameState.getLegalActions(self.expectimaxAgents[agentIndex])
 
       for action in pacmanLegalActions:
-        pacmanSuccessors.append(gameState.generateSuccessor(self.index, action))
+        ourSuccessors.append(gameState.generateSuccessor(self.expectimaxAgents[agentIndex], action))
 
       for child in pacmanSuccessors:
-        pacmanSuccessorsEvalScores.append(self.getActionRecursiveHelper(child, depthCounter+1))
+        ourSuccessorsEvalScores.append(self.getActionRecursiveHelper(child, depthCounter+1))
 
-      return max(pacmanSuccessorsEvalScores)
+      return max(ourSuccessorsEvalScores)
 
 
-    #Other teams turn
+    #When it's the other team's turn 
     else: 
 
-      ghostNumber = (depthCounter%numAgents) #which ghost is it?
-      ghostSuccessors = [] #list of GameStates
-      ghostSuccessorsEvalScores = [] #list of GameStates returned scores
+      opponenttSuccessors = [] #list of GameStates
+      opponentSuccessorsEvalScores = [] #list of GameStates returned scores
 
-      ghostLegalActions = gameState.getLegalActions(ghostNumber)
+      opponentLegalActions = gameState.getLegalActions(self.expectimaxAgents[agentIndex])
 
-      for action in ghostLegalActions:
-        ghostSuccessors.append(gameState.generateSuccessor(ghostNumber, action))
+      for action in opponentLegalActions:
+        opponentSuccessors.append(gameState.generateSuccessor(self.expectimaxAgents[agentIndex], action))
 
       for child in ghostSuccessors:
-        ghostSuccessorsEvalScores.append(self.getActionRecursiveHelper(child, depthCounter+1))
+        opponentSuccessorsEvalScores.append(self.getActionRecursiveHelper(child, depthCounter+1))
     
-      return sum(ghostSuccessorsEvalScores)/len(ghostSuccessorsEvalScores)
+      return sum(opponentSuccessorsEvalScores)/len(opponentSuccessorsEvalScores)
   
       
 

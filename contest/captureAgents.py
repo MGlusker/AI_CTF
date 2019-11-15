@@ -55,7 +55,7 @@ class CaptureAgent(Agent):
   # Methods to store key info #
   #############################
 
-  def __init__( self, index, timeForComputing = .1 ):
+  def __init__(self, index, timeForComputing = .1):
     """
     Lists several variables you can query:
     self.index = index for this agent

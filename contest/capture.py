@@ -103,7 +103,7 @@ class GameState:
     """
     return AgentRules.getLegalActions( self, agentIndex )
 
-  def generateSuccessor( self, agentIndex, action):
+  def generateSuccessor(self, agentIndex, action):
     """
     Returns the successor state (a GameState object) after the specified agent takes the action.
     """

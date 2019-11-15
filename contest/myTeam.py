@@ -90,3 +90,239 @@ class DummyAgent(CaptureAgent):
 
     return random.choice(actions)
 
+class BaseCaptureAgent(CaptureAgent):
+
+  def registerInitialState(self, gameState):
+    """
+    This method handles the initial setup of the
+    agent to populate useful fields (such as what team
+    we're on).
+
+    A distanceCalculator instance caches the maze distances
+    between each pair of positions, so your agents can use:
+    self.distancer.getDistance(p1, p2)
+
+    IMPORTANT: This method may run for at most 15 seconds.
+    """
+
+    '''
+    Make sure you do not delete the following line. If you would like to
+    use Manhattan distances instead of maze distances in order to save
+    on initialization time, please take a look at
+    CaptureAgent.registerInitialState in captureAgents.py.
+    '''
+    CaptureAgent.registerInitialState(self, gameState)
+
+    #Set our agents
+    if(isOnRedTeam):
+      ourAgents = gameState.getRedTeamIndices()
+      opponentAgents = gameState.getBlueTeamIndices()
+    else: 
+      ourAgents = gameState.getBlueTeamIndices()
+      opponentAgents = ameState.getRedTeamIndices()
+
+
+
+    '''
+    Your initialization code goes here, if you need any.
+    '''
+
+  def chooseAction(self, gameState)
+  
+    action = expectimaxGetAction(self, gameState)
+
+    return action
+
+
+
+  ###################
+  # Expectimax Code #
+  ###################
+
+
+  def expectimaxGetAction(self, gameState):
+    """
+      Returns the expectimax action using self.depth and self.evaluationFunction
+
+      All ghosts should be modeled as choosing -uniformly at random from their
+      legal moves.
+    """
+
+    #CHANGE CODE TO EVALUATE WHO'S TURN IT IS AT BEGINNING
+
+    pacmanSuccessors = [] #list of GameStates
+    pacmanSuccessorsEvalScores = [] #list of GameStates returned scores
+
+    pacmanLegalActions = gameState.getLegalActions(self.index)
+
+    for action in pacmanLegalActions:
+      pacmanSuccessors.append(gameState.generateSuccessor(self.index, action))
+    
+    for child in pacmanSuccessors:
+      pacmanSuccessorsEvalScores.append(self.getActionRecursiveHelper(child, 1))
+
+    return pacmanLegalActions[pacmanSuccessorsEvalScores.index(max(pacmanSuccessorsEvalScores))]
+   
+
+
+  def getActionRecursiveHelper(self, gameState, depthCounter):
+
+    NUM_AGENTS = 4
+    DEPTH = 5
+    #cutoff test
+
+    #*******
+    #NEED TO CHANGE for variable depth 
+    #*******
+
+    if((DEPTH*numAgents) == depthCounter):
+      return self.evaluationFunction(gameState)
+
+    #implement a terminal test
+    if(gameState.isOver()):
+      return self.evaluationFunction(gameState)
+
+    # When it's our turn
+    if((depthCounter%numAgents) in  == self.index): 
+
+      pacmanSuccessors = [] #list of GameStates
+      pacmanSuccessorsEvalScores = [] #list of GameStates returned scores
+
+      pacmanLegalActions = gameState.getLegalActions(self.index)
+
+      for action in pacmanLegalActions:
+        pacmanSuccessors.append(gameState.generateSuccessor(self.index, action))
+
+      for child in pacmanSuccessors:
+        pacmanSuccessorsEvalScores.append(self.getActionRecursiveHelper(child, depthCounter+1))
+
+      return max(pacmanSuccessorsEvalScores)
+
+
+    #Other 
+    else: 
+
+      ghostNumber = (depthCounter%numAgents) #which ghost is it?
+      ghostSuccessors = [] #list of GameStates
+      ghostSuccessorsEvalScores = [] #list of GameStates returned scores
+
+      ghostLegalActions = gameState.getLegalActions(ghostNumber)
+
+      for action in ghostLegalActions:
+        ghostSuccessors.append(gameState.generateSuccessor(ghostNumber, action))
+
+      for child in ghostSuccessors:
+        ghostSuccessorsEvalScores.append(self.getActionRecursiveHelper(child, depthCounter+1))
+    
+      return sum(ghostSuccessorsEvalScores)/len(ghostSuccessorsEvalScores)
+  
+      
+
+  def betterEvaluationFunction(currentGameState): 
+
+    """
+      Your extreme ghost-hunting, pellet-nabbing, food-gobbling, unstoppable
+      evaluation function (question 5).
+
+      DESCRIPTION: This evaluation function looks at the current position of pacman,
+      the current positions of all the food pellets, the current position of all of the ghosts,
+      and the current position of all of the food capsules. The function calculates a food score,
+      a capsule score, and the distances to each ghost.
+    """
+    currentPos = currentGameState.getPacmanPosition()
+    currentFood = currentGameState.getFood()
+    currentGhostStates = currentGameState.getGhostStates()
+    currentScaredTimes = [ghostState.scaredTimer for ghostState in currentGhostStates]
+    currentCapsules = currentGameState.getCapsules()
+
+
+    foodList = currentFood.asList()
+    numFood = len(foodList)
+    foodDistances = []
+    finalScore = 0.0
+    foodScore = 0.0
+    originalFoodScore = 0.0
+    closestFoodScore = 0.0
+
+
+    ## CREATE A FOOD SCORE
+    for food in foodList:    
+            foodDistances.append(manhattanDistance(currentPos, food))
+   
+    # if there's no food left in the game
+    if(numFood == 0): 
+      # then this state is really good
+      return 1000000
+     
+    else:
+      # reward states with less food
+      originalFoodScore = 2.5 * (1.0/numFood)
+      
+      # and reward states that have food that are close by
+      closestFoodDistance = min(foodDistances)
+      
+      # if there's food right next to pacman this is a good state
+      if closestFoodDistance == 0:
+        closestFoodScore = 200.0
+
+      # otherwise make it so closer food gets a higher score
+      else:  
+        closestFoodScore = 2.80 * (1.0/closestFoodDistance) 
+
+      # create a final food score
+      foodScore = closestFoodScore + originalFoodScore
+
+
+    ## CREATE A CAPSULE SCORE
+    capsuleScore = 0.0
+    distanceToCapsules = []
+    minCapsuleDistance = None 
+
+    for capsule in currentCapsules:
+      distanceToCapsules.append(manhattanDistance(currentPos, capsule))
+
+    if not len(distanceToCapsules) == 0:
+      minCapsuleDistance = min(distanceToCapsules)
+      # reward being close to ghosts and capsules
+      if minCapsuleDistance == 0:
+        capsuleScore = 500.0
+      else:
+        capsuleScore = 2.80 * (1.0/(minCapsuleDistance))#+closestGhostDistance))
+    else:
+      capsuleScore = 20.0 #20.0
+    
+
+    ## FIND DISTANCES TO GHOSTS
+    #creates a list of distances to ghosts
+    distanceToGhosts = []
+    for ghost in currentGhostStates:
+      distanceToGhosts.append(manhattanDistance(currentPos, ghost.getPosition()))
+
+    # manhattan distance to the closest ghost
+    closestGhostDistance = min(distanceToGhosts)
+
+    
+    ## CREATE A FINALSCORE TO RETURN
+    # if the ghost is right next to pacman thats bad
+    if closestGhostDistance == 0:
+      finalScore -= 100.0
+
+    # otherwise scale the distance to the ghost and add in the foodscore and capsulescore
+    else:
+      finalScore -= 2.0 * (1.0/closestGhostDistance)
+
+      finalScore += foodScore + capsuleScore
+    
+
+    return finalScore + scoreEvaluationFunction(currentGameState) #+ numFood
+
+
+
+  ####################
+  #  Helper Methods  #
+  ####################
+
+  def getOurAgents(self)
+
+
+

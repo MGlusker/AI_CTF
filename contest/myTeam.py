@@ -173,7 +173,7 @@ class BaseCaptureAgent(CaptureAgent):
 
       #only adds top 3 to be explored 
       sorted(currentEvalScores, reverse = True)
-      top3 = currentEvalScores[1:3]
+      top3 = currentEvalScores[0:2]
 
       #only recurses for the top 3 of 5 moves 
       for i in range(3):
@@ -201,7 +201,7 @@ class BaseCaptureAgent(CaptureAgent):
 
       #only adds top 3 to be explored 
       sorted(currentEvalScores, reverse = True)
-      top3 = currentEvalScores[1:3]
+      top3 = currentEvalScores[0:2]
 
       #only recurses for the top 3 of 5 moves 
       for i in range(3):
@@ -209,9 +209,9 @@ class BaseCaptureAgent(CaptureAgent):
         opponentSuccessorsEvalScores.append(self.getActionRecursiveHelper(child, depthCounter+1))
 
       averages = []
-      for i in range(len(opponentSuccessorsEvalScores)):
-        total = sum(opponentSuccessorsEvalScores)
-        averages[i] = opponentSuccessorsEvalScores[i]/total 
+      total = sum(opponentSuccessorsEvalScores)
+      for i in range(len(opponentSuccessorsEvalScores)): 
+        averages[i] = (opponentSuccessorsEvalScores[i]/total)*opponentSuccessorsEvalScores[i]
 
       return sum(averages)
   

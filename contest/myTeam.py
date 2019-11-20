@@ -84,6 +84,84 @@ class BaseCaptureAgent(CaptureAgent):
 
 
 
+
+  ########################
+  # Reading Noisy Sensor #
+  ########################
+
+  '''
+  #THIS METHOD IS MEANT TO RETURN A DISTRIBUTION OF STATES
+  def findOpponentLocations(self, gameState):
+    #returns a counter of the distribution of states
+    locations = util.Counter()
+
+    knownPositions = []
+    unknownAgentsIndices = []
+
+    #get agent positions for agents you see 
+    for i in range(4):
+      pos = gameState.getAgentPosition(i) 
+      if pos != None:
+        knownPositions[i] = pos
+      else: 
+        unknownAgentsIndices.append(i)
+
+
+    mapHeight = gameState.getWalls().height
+    mapWidth = gameState.getWalls().width
+
+    noisyDistances = gameState.getAgentDistances()
+
+    locationProbsPerAgent =[]
+
+    #loop over all locations without walls 
+    for i in unknownAgentsIndices:
+      locationProbsPerAgent[i] = []
+
+      for x in range(mapWidth):
+        for y in range(mapHeight):
+          if not gameState.hasWall(x,y):
+
+            #THIS LINE PROBABLY NOT RIGHT because manhattan distance from where????
+            trueDistance = getManhattanDistance([x,y])
+            prob = gameState.getDistanceProb(trueDistance, noisyDistances[i])
+            locationProbsPerAgent[i] = prob
+
+
+    #then need to create all poss *states* based on location probabilities
+    '''
+    def getExpectedDistance(self, myAgentIndex, opponentIndex):
+
+      for i in range(4):
+        pos = gameState.getAgentPosition(i) 
+
+        if pos != None:
+          knownPositions[i] = pos
+        else: 
+          unknownAgentsIndices.append(i)
+
+      if knownPositions[opponentIndex] != None:
+        return self.getMazeDistance(knownPositions[myAgentIndex], knownPositions[opponentIndex])
+
+      mapHeight = gameState.getWalls().height
+      mapWidth = gameState.getWalls().width
+
+      noisyDistance = gameState.getAgentDistances()[opponentIndex]
+      averageDistance = 0
+
+      for x in range(mapWidth):
+        for y in range(mapHeight):
+          if not gameState.hasWall(x,y):
+            trueDistance = self.getManhattanDistance(knownPositions[myAgentIndex], [x,y])
+            prob = gameState.getDistanceProb(trueDistance, noisyDistance)
+            averageDistance =+ (self.getMazeDistance(knownPositions[myAgentIndex], [x,y])*prob)
+
+      return averageDistance
+
+
+
+
+
   ###################
   # Expectimax Code #
   ###################
@@ -124,14 +202,11 @@ class BaseCaptureAgent(CaptureAgent):
 
   def getActionRecursiveHelper(self, gameState, depthCounter):
 
-    
     ## to do
     # particle filtering so we can get legal actions
     # make it so expectimax doesn't simply return average of all possible actions
-    # need a better evaluation function that actually works 
-    # alpha / beta?? 
-
-
+    # need a better evaluation function that actually works
+    # alpha / beta??
 
     NUM_AGENTS = 4
 
@@ -173,7 +248,7 @@ class BaseCaptureAgent(CaptureAgent):
 
       #only adds top 3 to be explored 
       sorted(currentEvalScores, reverse = True)
-      top3 = currentEvalScores[1:3]
+      top3 = currentEvalScores[0:2]
 
       #only recurses for the top 3 of 5 moves 
       for i in range(3):
@@ -201,7 +276,7 @@ class BaseCaptureAgent(CaptureAgent):
 
       #only adds top 3 to be explored 
       sorted(currentEvalScores, reverse = True)
-      top3 = currentEvalScores[1:3]
+      top3 = currentEvalScores[0:2]
 
       #only recurses for the top 3 of 5 moves 
       for i in range(3):

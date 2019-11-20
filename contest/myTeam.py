@@ -162,17 +162,24 @@ class BaseCaptureAgent(CaptureAgent):
 
       ourLegalActions = gameState.getLegalActions(self.expectimaxAgents[agentIndex])
 
+
       for action in pacmanLegalActions:
         ourSuccessors.append(gameState.generateSuccessor(self.expectimaxAgents[agentIndex], action))
 
+
       currentEvalScores = []
       for child in pacmanSuccessors:
-        currentEvalScore.append(self.evaluationFunction(gameState))
+        currentEvalScores.append(self.evaluationFunction(child))
 
-      #THIS IS WHERE THE RECURSIVE CALL TAKES PLACE
-      #NEED TO PRUNE BEFORE THIS
-      for child in pacmanSuccessors:
+      #only adds top 3 to be explored 
+      sorted(currentEvalScores, reverse = True)
+      top3 = currentEvalScores[1:3]
+
+      #only recurses for the top 3 of 5 moves 
+      for i in range(3):
+        child = pacmanSuccessors[pacmanSuccessors.index(top3[i])]
         ourSuccessorsEvalScores.append(self.getActionRecursiveHelper(child, depthCounter+1))
+        
 
       return max(ourSuccessorsEvalScores)
 
@@ -188,10 +195,25 @@ class BaseCaptureAgent(CaptureAgent):
       for action in opponentLegalActions:
         opponentSuccessors.append(gameState.generateSuccessor(self.expectimaxAgents[agentIndex], action))
 
-      for child in ghostSuccessors:
+      currentEvalScores = []
+      for child in opponentSuccessors:
+        currentEvalScores.append(self.evaluationFunction(child))
+
+      #only adds top 3 to be explored 
+      sorted(currentEvalScores, reverse = True)
+      top3 = currentEvalScores[1:3]
+
+      #only recurses for the top 3 of 5 moves 
+      for i in range(3):
+        child = opponentSuccessors[opponentSuccessors.index(top3[i])]
         opponentSuccessorsEvalScores.append(self.getActionRecursiveHelper(child, depthCounter+1))
-    
-      return sum(opponentSuccessorsEvalScores)/len(opponentSuccessorsEvalScores)
+
+      averages = []
+      for i in range(len(opponentSuccessorsEvalScores)):
+        total = sum(opponentSuccessorsEvalScores)
+        averages[i] = opponentSuccessorsEvalScores[i]/total 
+
+      return sum(averages)
   
       
 

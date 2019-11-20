@@ -383,6 +383,8 @@ class BaseCaptureAgent(CaptureAgent):
 
     return capsuleScore
 
+
+
   ########################
   # Reading Noisy Sensor #
   ########################
@@ -428,5 +430,46 @@ class BaseCaptureAgent(CaptureAgent):
 
     #then need to create all poss *states* based on location probabilities
     '''
+
+  def getExpectedDistance(self, opponentIndex):
+
+    for i in range(4):
+      pos = gameState.getAgentPosition(i) 
+
+      if pos != None:
+        knownPositions[i] = pos
+      else: 
+        unknownAgentsIndices.append(i)
+
+    if knownPositions[opponentIndex] != None:
+      return self.getMazeDistance(knownPositions[myAgentIndex], knownPositions[opponentIndex])
+
+    mapHeight = gameState.getWalls().height
+    mapWidth = gameState.getWalls().width
+
+    noisyDistances = gameState.getAgentDistances()
+    averageDistances = []
+
+    for myAgentIndex in self.ourTeamAgents:
+      averageDistances[myAgentIndex] = []
+
+      for opponentIndex in self.opponentAgents:
+        averageDistances[myAgentIndex][opponentIndex] = 0
+
+        for x in range(mapWidth):
+          for y in range(mapHeight):
+
+            if not gameState.hasWall(x,y):
+
+              trueDistance = self.getManhattanDistance(knownPositions[myAgentIndex], [x,y])
+              prob = gameState.getDistanceProb(trueDistance, noisyDistances[opponentIndex])
+              averageDistances[myAgentIndex][opponentIndex] =+ (self.getMazeDistance(knownPositions[myAgentIndex], [x,y])*prob)
+
+
+    #this return a 2x2 array (2D array) where the first entry is our agent and the second is the opponent
+    # For example, calling averageDistances[0][1] returns the average distance to from our 0th agent to our opponents 1st agent
+    # NOTE: agent indices may be fucked up, but I think they should line up with expectimax identifiers
+    return averageDistances
+
 
 

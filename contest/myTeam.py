@@ -173,7 +173,7 @@ class BaseCaptureAgent(CaptureAgent):
 
       #only adds top 3 to be explored 
       sorted(currentEvalScores, reverse = True)
-      top3 = currentEvalScores[0:2]
+      top3 = currentEvalScores[0:3]
 
       #only recurses for the top 3 of 5 moves 
       for i in range(3):
@@ -201,7 +201,7 @@ class BaseCaptureAgent(CaptureAgent):
 
       #only adds top 3 to be explored 
       sorted(currentEvalScores, reverse = True)
-      top3 = currentEvalScores[0:2]
+      top3 = currentEvalScores[0:3]
 
       #only recurses for the top 3 of 5 moves 
       for i in range(3):

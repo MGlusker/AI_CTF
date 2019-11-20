@@ -165,6 +165,12 @@ class BaseCaptureAgent(CaptureAgent):
       for action in pacmanLegalActions:
         ourSuccessors.append(gameState.generateSuccessor(self.expectimaxAgents[agentIndex], action))
 
+      currentEvalScores = []
+      for child in pacmanSuccessors:
+        currentEvalScore.append(self.evaluationFunction(gameState))
+
+      #THIS IS WHERE THE RECURSIVE CALL TAKES PLACE
+      #NEED TO PRUNE BEFORE THIS
       for child in pacmanSuccessors:
         ourSuccessorsEvalScores.append(self.getActionRecursiveHelper(child, depthCounter+1))
 

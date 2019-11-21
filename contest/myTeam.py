@@ -22,7 +22,7 @@ import game
 #################
 
 def createTeam(firstIndex, secondIndex, isRed,
-               first = 'DummyAgent', second = 'DummyAgent'):
+               first = 'BaseCaptureAgent', second = 'BaseCaptureAgent'):
   """
   This function should return a list of two agents that will form the
   team, initialized using firstIndex and secondIndex as their agent
@@ -76,9 +76,9 @@ class BaseCaptureAgent(CaptureAgent):
     Your initialization code goes here, if you need any.
     '''
 
-  def chooseAction(self, gameState)
+  def chooseAction(self, gameState):
   
-    action = expectimaxGetAction(self, gameState)
+    action = self.expectimaxGetAction(gameState)
 
     return action
 
@@ -162,12 +162,12 @@ class BaseCaptureAgent(CaptureAgent):
 
       ourLegalActions = gameState.getLegalActions(self.expectimaxAgents[agentIndex])
 
-      for action in pacmanLegalActions:
+      for action in ourLegalActions:
         ourSuccessors.append(gameState.generateSuccessor(self.expectimaxAgents[agentIndex], action))
 
       currentEvalScores = []
-      for child in pacmanSuccessors:
-        currentEvalScore.append(self.evaluationFunction(gameState))
+      for child in ourSuccessors:
+        currentEvalScores.append(self.evaluationFunction(gameState))
 
       # only add best 3 states to fully evaluate
       sorted(currentEvalScores, reverse = True)
@@ -200,7 +200,7 @@ class BaseCaptureAgent(CaptureAgent):
       sorted(currentEvalScores, reverse = True)
       topThree = currentEvalScores[0:3]
 
-      for i in range(3)
+      for i in range(3):
         child = opponentSuccessors[opponentSuccessors.index(topThree[i])]
         opponentSuccessorsEvalScores.append(self.getActionRecursiveHelper(child, depthCounter+1))
     
@@ -228,7 +228,7 @@ class BaseCaptureAgent(CaptureAgent):
     enemyCurrentStates = []
     # want to have the correct states assigned to the correct teams
     for i in range(4):
-      if i is in self.ourTeamAgents:
+      if i in self.ourTeamAgents:
         ourCurrentStates.append(allAgentStates[i])
       else:
         enemyCurrentStates.append(allAgentStates[i])

@@ -229,17 +229,21 @@ class OffensiveBaseAgent(BaseCaptureAgent):
   """
   def getFeatures(self, gameState):
     features = util.Counter()
-    foodToEat = self.getFood(gameState)   
-    foodList = foodToEat.asList()
-    features['successorScore'] = -len(foodList)#self.getScore(successor)
+
+    features["foodScore"] = self.getFoodScore()
+    features["capsuleScore"] = self.getCapsuleScore()
+    
+    #foodToEat = self.getFood(gameState)   
+    #foodList = foodToEat.asList()
+    #features['successorScore'] = -len(foodList)#self.getScore(successor)
 
     # Compute distance to the nearest food
-
+    """
     if len(foodList) > 0: # This should always be True,  but better safe than sorry
       myPos = successor.getAgentState(self.index).getPosition()
       minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
       features['distanceToFood'] = minDistance
-    
+    """
     return features
 
   def getWeights(self, gameState):

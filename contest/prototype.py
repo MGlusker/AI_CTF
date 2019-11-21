@@ -146,7 +146,7 @@ class BaseCaptureAgent(CaptureAgent):
 
       currentEvalScores = []
       for child in ourSuccessors:
-        currentEvalScores.append(self.evaluationFunction(gameState))
+        currentEvalScores.append(self.evaluationFunction(child))
 
       # only add best 3 states to fully evaluate
       sorted(currentEvalScores, reverse = True)
@@ -211,12 +211,12 @@ class BaseCaptureAgent(CaptureAgent):
     else:
       return successor
 
-  def evaluationFunction(self, gameState, action):
+  def evaluationFunction(self, gameState):
     """
     Computes a linear combination of features and feature weights
     """
-    features = self.getFeatures(gameState, action)
-    weights = self.getWeights(gameState, action)
+    features = self.getFeatures(gameState)
+    weights = self.getWeights(gameState)
     return features * weights
   
   
@@ -227,10 +227,10 @@ class OffensiveBaseAgent(BaseCaptureAgent):
   we give you to get an idea of what an offensive agent might look like,
   but it is by no means the best or only way to build an offensive agent.
   """
-  def getFeatures(self, gameState, action):
+  def getFeatures(self, gameState):
     features = util.Counter()
-    successor = self.getSuccessor(gameState, action)
-    foodList = self.getFood(successor).asList()    
+    foodToEat = self.getFood(gameState)   
+    foodList = foodToEat.asList()
     features['successorScore'] = -len(foodList)#self.getScore(successor)
 
     # Compute distance to the nearest food
@@ -239,9 +239,10 @@ class OffensiveBaseAgent(BaseCaptureAgent):
       myPos = successor.getAgentState(self.index).getPosition()
       minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
       features['distanceToFood'] = minDistance
+    
     return features
 
-  def getWeights(self, gameState, action):
+  def getWeights(self, gameState):
     return {'successorScore': 100, 'distanceToFood': -1}
 
 class DefensiveBaseAgent(BaseCaptureAgent):
@@ -252,7 +253,7 @@ class DefensiveBaseAgent(BaseCaptureAgent):
   such an agent.
   """
 
-  def getFeatures(self, gameState, action):
+  def getFeatures(self, gameState):
     features = util.Counter()
     successor = self.getSuccessor(gameState, action)
 
@@ -277,5 +278,5 @@ class DefensiveBaseAgent(BaseCaptureAgent):
 
     return features
 
-  def getWeights(self, gameState, action):
+  def getWeights(self, gameState):
     return {'numInvaders': -1000, 'onDefense': 100, 'invaderDistance': -10, 'stop': -100, 'reverse': -2}

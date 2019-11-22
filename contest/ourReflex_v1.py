@@ -152,18 +152,22 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
 
     #red is always on the left; blue always on right 
     #find my side 
+    print gameState.isOnRedTeam(self.index)
     if gameState.isOnRedTeam(self.index):
-      x = mapWidth/2
+      x = (mapWidth/2)-1
       for y in range(mapHeight):
         if not gameState.hasWall(x,y):
           mySideList.append((x,y))
 
-    else: 
-      x = (mapWidth/2)+1
+    #print not gameState.isOnRedTeam(self.index)
+    if not gameState.isOnRedTeam(self.index):
+      x = (mapWidth/2)
+      #print "BLUE"
       for y in range(mapHeight):
         if not gameState.hasWall(x,y):
           mySideList.append((x,y))
 
+    #print mySideList
 
 
 
@@ -171,7 +175,7 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
     if len(foodList) > 0: # This should always be True,  but better safe than sorry
 
       #If I'm carrying more than 2 food go back home
-      if agentState.numCarrying < 3:
+      if agentState.numCarrying < 1:
         
         minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
         features['distanceToFood'] = minDistance
@@ -194,7 +198,7 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
 
 
     if self.opponentAgents in knownAgentsIndices:
-      
+      finalScore = 0 
       closestGhostDistance = min([self.getMazeDistance(myPos, opponentLocation) for opponentLocation in knownPositions])
       if closestGhostDistance <=3:
         print "IM SCARED"
@@ -209,13 +213,14 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
       else:
         finalScore = 0
 
+      print finalScore
       features['scaredScore'] = finalScore
 
 
     return features
 
   def getWeights(self, gameState, action):
-    Weights = {'successorScore': 100, 'distanceToFood': -1, 'scaredScore': -10000}
+    Weights = {'successorScore': 100, 'distanceToFood': -1, 'scaredScore': -1}
 
     #if features['scaredScore'] > 0:
       

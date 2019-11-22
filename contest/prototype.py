@@ -146,7 +146,7 @@ class BaseCaptureAgent(CaptureAgent):
 
       currentEvalScores = []
       for child in ourSuccessors:
-        currentEvalScores.append(self.evaluationFunction(gameState))
+        currentEvalScores.append(self.evaluationFunction(child))
 
       # only add best 3 states to fully evaluate
       sorted(currentEvalScores, reverse = True)
@@ -233,12 +233,21 @@ class OffensiveBaseAgent(BaseCaptureAgent):
     foodList = self.getFood(gameState).asList()    
     features['successorScore'] = -len(foodList)#self.getScore(successor)
 
-    # Compute distance to the nearest food
 
+    features["foodScore"] = self.getFoodScore()
+    features["capsuleScore"] = self.getCapsuleScore()
+    
+    #foodToEat = self.getFood(gameState)   
+    #foodList = foodToEat.asList()
+    #features['successorScore'] = -len(foodList)#self.getScore(successor)
+
+    # Compute distance to the nearest food
+    """
     if len(foodList) > 0: # This should always be True,  but better safe than sorry
       myPos = successor.getAgentState(self.index).getPosition()
       minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
       features['distanceToFood'] = minDistance
+    """
     return features
 
   def getWeights(self, gameState):
@@ -277,5 +286,5 @@ class DefensiveBaseAgent(BaseCaptureAgent):
 
     return features
 
-  def getWeights(self, gameState, action):
+  def getWeights(self, gameState):
     return {'numInvaders': -1000, 'onDefense': 100, 'invaderDistance': -10, 'stop': -100, 'reverse': -2}

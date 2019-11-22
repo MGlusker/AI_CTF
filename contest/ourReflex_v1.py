@@ -47,6 +47,8 @@ def createTeam(firstIndex, secondIndex, isRed,
   any extra arguments, so you should make sure that the default
   behavior is what you want for the nightly contest.
   """
+
+
   return [eval(first)(firstIndex), eval(second)(secondIndex)]
 
 ##########
@@ -141,7 +143,6 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
     foodList = self.getFood(successor).asList()    
     features['successorScore'] = -len(foodList)#self.getScore(successor)
 
-
     #I need to figure out where my side is 
     agentState = gameState.data.agentStates[self.index]
     myPos = successor.getAgentState(self.index).getPosition()
@@ -152,9 +153,10 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
 
     #red is always on the left; blue always on right 
     #find my side 
-    print gameState.isOnRedTeam(self.index)
+    #print gameState.isOnRedTeam(self.index)
     if gameState.isOnRedTeam(self.index):
       x = (mapWidth/2)-1
+      mySideX = x
       for y in range(mapHeight):
         if not gameState.hasWall(x,y):
           mySideList.append((x,y))
@@ -162,6 +164,7 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
     #print not gameState.isOnRedTeam(self.index)
     if not gameState.isOnRedTeam(self.index):
       x = (mapWidth/2)
+      mySideX = x
       #print "BLUE"
       for y in range(mapHeight):
         if not gameState.hasWall(x,y):
@@ -175,7 +178,7 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
     if len(foodList) > 0: # This should always be True,  but better safe than sorry
 
       #If I'm carrying more than 2 food go back home
-      if agentState.numCarrying < 1:
+      if agentState.numCarrying < 2:
         
         minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
         features['distanceToFood'] = minDistance
@@ -188,39 +191,53 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
     knownPositions = []
     knownAgentsIndices = []
 
-    for i in range(4):
+
+
+    for i in self.opponentAgents:
         pos = gameState.getAgentPosition(i) 
 
-        if pos != None and i in self.opponentAgents:
+        if pos != None:
           print "Ghosts within range of offensive agent"
           knownPositions.append(pos)
           knownAgentsIndices.append(i)
 
 
-    if self.opponentAgents in knownAgentsIndices:
-      finalScore = 0 
-      closestGhostDistance = min([self.getMazeDistance(myPos, opponentLocation) for opponentLocation in knownPositions])
-      if closestGhostDistance <=3:
+          #rint knownPositions
+
+
+    onMySide = True 
+    if myPos[0] >= mySideX and gameState.isOnRedTeam(self.index):
+      onMySide = False
+    if myPos[0] <= mySideX and not gameState.isOnRedTeam(self.index):
+      onMySide = False
+
+    if onMySide == False:
+      if len(knownAgentsIndices) != 0: #If a opponent is clsoe
+        finalScore = 0 
+        closestGhostDistance = min([self.getMazeDistance(myPos, opponentLocation) for opponentLocation in knownPositions])
+        
         print "IM SCARED"
+        print closestGhostDistance
         if(closestGhostDistance == 0):
           finalScore -= float("inf")
         if(closestGhostDistance == 1):
-          finalScore -= 10000
+          finalScore -= 10
         if(closestGhostDistance == 2):
-          finalScore -= 8000
+          finalScore -= 5
         if(closestGhostDistance == 3):
-          finalScore -= 7000
-      else:
-        finalScore = 0
+          finalScore -= 2
+        if(closestGhostDistance == 3):
+          finalScore -= 0.5
+            
 
-      print finalScore
-      features['scaredScore'] = finalScore
+        print finalScore
+        features['scaredScore'] = finalScore
 
 
     return features
 
   def getWeights(self, gameState, action):
-    Weights = {'successorScore': 100, 'distanceToFood': -1, 'scaredScore': -1}
+    Weights = {'successorScore': 100, 'distanceToFood': -1, 'scaredScore': 2}
 
     #if features['scaredScore'] > 0:
       

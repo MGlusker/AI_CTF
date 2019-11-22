@@ -154,7 +154,7 @@ class BaseCaptureAgent(CaptureAgent):
 
       # only fully explores top 3 (out of 5) moves
       for i in range(3):
-        child = pacmanSuccessors[pacmanSuccessors.index(topThree[i])]
+        child = ourSuccessors[ourSuccessors.index(topThree[i])]
         ourSuccessorsEvalScores.append(self.getActionRecursiveHelper(child, depthCounter+1))
 
       return max(ourSuccessorsEvalScores)
@@ -199,11 +199,11 @@ class BaseCaptureAgent(CaptureAgent):
   ##################
 
 
-  def getSuccessor(self, gameState, action):
+  def getSuccessor(self, gameState):
     """
     Finds the next successor which is a grid position (location tuple).
     """
-    successor = gameState.generateSuccessor(self.index, action)
+    successor = gameState.generateSuccessor(self.index)
     pos = successor.getAgentState(self.index).getPosition()
     if pos != nearestPoint(pos):
       # Only half a grid position was covered
@@ -211,12 +211,12 @@ class BaseCaptureAgent(CaptureAgent):
     else:
       return successor
 
-  def evaluationFunction(self, gameState, action):
+  def evaluationFunction(self, gameState):
     """
     Computes a linear combination of features and feature weights
     """
-    features = self.getFeatures(gameState, action)
-    weights = self.getWeights(gameState, action)
+    features = self.getFeatures(gameState)
+    weights = self.getWeights(gameState)
     return features * weights
   
   
@@ -227,10 +227,10 @@ class OffensiveBaseAgent(BaseCaptureAgent):
   we give you to get an idea of what an offensive agent might look like,
   but it is by no means the best or only way to build an offensive agent.
   """
-  def getFeatures(self, gameState, action):
+  def getFeatures(self, gameState):
     features = util.Counter()
-    successor = self.getSuccessor(gameState, action)
-    foodList = self.getFood(successor).asList()    
+    successor = gameState
+    foodList = self.getFood(gameState).asList()    
     features['successorScore'] = -len(foodList)#self.getScore(successor)
 
     # Compute distance to the nearest food
@@ -241,7 +241,7 @@ class OffensiveBaseAgent(BaseCaptureAgent):
       features['distanceToFood'] = minDistance
     return features
 
-  def getWeights(self, gameState, action):
+  def getWeights(self, gameState):
     return {'successorScore': 100, 'distanceToFood': -1}
 
 class DefensiveBaseAgent(BaseCaptureAgent):
@@ -252,9 +252,9 @@ class DefensiveBaseAgent(BaseCaptureAgent):
   such an agent.
   """
 
-  def getFeatures(self, gameState, action):
+  def getFeatures(self, gameState):
     features = util.Counter()
-    successor = self.getSuccessor(gameState, action)
+    successor = self.getSuccessor(gameState)
 
     myState = successor.getAgentState(self.index)
     myPos = myState.getPosition()

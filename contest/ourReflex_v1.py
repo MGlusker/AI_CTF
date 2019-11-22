@@ -55,6 +55,7 @@ def createTeam(firstIndex, secondIndex, isRed,
 # Agents #
 ##########
 
+
 class ReflexCaptureAgent(CaptureAgent):
   """
   A base class for reflex agents that chooses score-maximizing actions
@@ -211,33 +212,37 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
     if myPos[0] <= mySideX and not gameState.isOnRedTeam(self.index):
       onMySide = False
 
-    if onMySide == False:
-      if len(knownAgentsIndices) != 0: #If a opponent is clsoe
-        finalScore = 0 
-        closestGhostDistance = min([self.getMazeDistance(myPos, opponentLocation) for opponentLocation in knownPositions])
-        
-        print "IM SCARED"
-        print closestGhostDistance
-        if(closestGhostDistance == 0):
-          finalScore -= float("inf")
-        if(closestGhostDistance == 1):
-          finalScore -= 10
-        if(closestGhostDistance == 2):
-          finalScore -= 5
-        if(closestGhostDistance == 3):
-          finalScore -= 2
-        if(closestGhostDistance == 3):
-          finalScore -= 0.5
-            
+    
+    if len(knownAgentsIndices) != 0: #If a opponent is clsoe
+      finalScore = 0 
+      closestGhostDistance = min([self.getMazeDistance(myPos, opponentLocation) for opponentLocation in knownPositions])
+      
+      print "IM SCARED"
+      print closestGhostDistance
+      if(closestGhostDistance == 0):
+        finalScore -= float("inf")
+      if(closestGhostDistance == 1):
+        finalScore -= 10
+      if(closestGhostDistance == 2):
+        finalScore -= 5
+      if(closestGhostDistance == 3):
+        finalScore -= 2
+      if(closestGhostDistance == 3):
+        finalScore -= 0.5
+          
 
-        print finalScore
+    
+      if onMySide == False:
         features['scaredScore'] = finalScore
+      if onMySide == True:
+        if gameState == successor:
+          features['scaredScore'] += 10
 
 
     return features
 
   def getWeights(self, gameState, action):
-    Weights = {'successorScore': 100, 'distanceToFood': -1, 'scaredScore': 2}
+    Weights = {'successorScore': 100, 'distanceToFood': -1, 'scaredScore': 1}
 
     #if features['scaredScore'] > 0:
       

@@ -226,8 +226,6 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
       if(closestGhostDistance == 2):
         finalScore -= 5
       if(closestGhostDistance == 3):
-        finalScore -= 2
-      if(closestGhostDistance == 3):
         finalScore -= 0.5
           
 

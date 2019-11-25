@@ -50,7 +50,7 @@ class JointParticleFilter:
   positions.
   """
 
-  def __init__(self, numParticles=500):
+  def __init__(self, numParticles=100):
       self.setNumParticles(numParticles)
 
   def setNumParticles(self, numParticles):
@@ -330,16 +330,16 @@ class BaseCaptureAgent(CaptureAgent):
     self.displayDistributionsOverPositions(displayDist)
 
     self.jointInference.elapseTime(gameState)
-    #print "Particle Filtering time:", time.time() - start
+    print "Particle Filtering time:", time.time() - start
 
     ##########################
     # END PARTICLE FILTERING #
     ##########################
 
-    
+  
     
     action = self.expectimaxGetAction(gameState, dist)
-
+    print "Total time:", time.time() - start
     return action
 
   def expectimaxGetAction(self, gameState, dist):
@@ -370,6 +370,7 @@ class BaseCaptureAgent(CaptureAgent):
     for child in ourSuccessors:
       ourSuccessorsEvalScores.append(self.getActionRecursiveHelper(child, 1))
 
+    print ourSuccessorsEvalScores
     return ourLegalActions[ourSuccessorsEvalScores.index(max(ourSuccessorsEvalScores))]
    
 
@@ -388,7 +389,7 @@ class BaseCaptureAgent(CaptureAgent):
     NUM_AGENTS = 4
 
     #In terms of moves, not plies
-    DEPTH = 4 
+    DEPTH = 8
     
     agentIndex = depthCounter%NUM_AGENTS
 
@@ -396,7 +397,7 @@ class BaseCaptureAgent(CaptureAgent):
     # NEED TO CHANGE depth variable if we want variable depth  #
     ############################################################
 
-    print depthCounter
+    #print depthCounter
     #When we hit our depth limit AKA cutoff test
     if(DEPTH == depthCounter):
       return self.evaluationFunction(gameState)
@@ -422,7 +423,7 @@ class BaseCaptureAgent(CaptureAgent):
         currentEvalScores[child] = (self.evaluationFunction(gameState))
 
       # only add best 3 states to fully evaluate
-      topThree = currentEvalScores.sortedKeys()[0:3]
+      topThree = currentEvalScores.sortedKeys()[0:2]
 
       # only fully explores top 3 (out of 5) moves
       for successor in topThree:
@@ -447,7 +448,7 @@ class BaseCaptureAgent(CaptureAgent):
         currentEvalScores[child] = (self.evaluationFunction(gameState))
 
       # only add best 3 states to fully evaluate
-      topThree = currentEvalScores.sortedKeys()[0:3]
+      topThree = currentEvalScores.sortedKeys()[0:2]
 
       # only fully explores top 3 (out of 5) moves
       for successor in topThree:
@@ -469,36 +470,36 @@ class BaseCaptureAgent(CaptureAgent):
 
     # our agents are at self.expectimaxAgents[0,1] opponents at [2,3] 
     # i dont think this works 
-    # allAgentStates = [currentGameState.getAgentState(i) for i in range(4)]
+    allAgentStates = [currentGameState.getAgentState(i) for i in range(4)]
 
-    # # a list to hold our current states
-    # ourCurrentStates = []
-    # # a list to hold the enemies' current states
-    # enemyCurrentStates = []
-    # # want to have the correct states assigned to the correct teams
-    # for i in range(4):
-    #   if i in self.ourTeamAgents:
-    #     ourCurrentStates.append(allAgentStates[i])
-    #   else:
-    #     enemyCurrentStates.append(allAgentStates[i])
+    # a list to hold our current states
+    ourCurrentStates = []
+    # a list to hold the enemies' current states
+    enemyCurrentStates = []
+    # want to have the correct states assigned to the correct teams
+    for i in range(4):
+      if i in self.ourTeamAgents:
+        ourCurrentStates.append(allAgentStates[i])
+      else:
+        enemyCurrentStates.append(allAgentStates[i])
     
-    # currentEnemyScaredTimes = [enemyState.scaredTimer for enemyState in enemyCurrentStates]
+    currentEnemyScaredTimes = [enemyState.scaredTimer for enemyState in enemyCurrentStates]
 
     
-    # finalScore = 0.0
-    # foodScore = self.getFoodScore(currentGameState)
-    # capsuleScore = self.getCapsuleScore(currentGameState)
+    finalScore = 0.0
+    foodScore = self.getFoodScore(currentGameState)
+    capsuleScore = self.getCapsuleScore(currentGameState)
     
 
-    # ## FIND DISTANCES TO ENEMIES
-    # #creates a list of distances to enemies
-    # # this is where we want to implement our noisy reading ************
+    ## FIND DISTANCES TO ENEMIES
+    #creates a list of distances to enemies
+    # this is where we want to implement our noisy reading ************
 
     # distanceToEnemies = []
     # for enemy in enemyCurrentStates:
     #   # 0 or 1 is us 2 or 3 is enemy
-    #   distanceToEnemies.append(self.getExpectedDistance(expectimaxAgents[0], expectimaxAgents[2]))
-    #   #distanceToEnemies.append(manhattanDistance(currentPos, enemy.getPosition()))
+      
+    #   distanceToEnemies.append(self.getMazeDistance(currentGameState.getAgentPosition(self.index), enemy.getPosition()))
 
     # # manhattan distance to the closest enemy
     # closestEnemyDistance = min(distanceToEnemies)
@@ -513,11 +514,64 @@ class BaseCaptureAgent(CaptureAgent):
     # else:
     #   finalScore -= 2.0 * (1.0/closestEnemyDistance)
 
-    #   finalScore += foodScore + capsuleScore
+    finalScore += foodScore + capsuleScore
     
 
-    return self.getScore(currentGameState)
+    return finalScore
 
+  def getFoodScore(self, gameState):
+    #this is meant as an offensive food score
+
+    #This is for food we are trying to eat
+    if gameState.isOnRedTeam(self.index):
+      foodList = gameState.getBlueFood().asList()
+    else:
+      foodList = gameState.getRedFood().asList()
+
+
+    foodDistances = []
+    for food in foodList:    
+      foodDistances.append(self.getMazeDistance(gameState.getAgentPosition(self.index), food))
+
+    #foodDistances = sorted(foodDistances)
+    #print foodDistances
+    # get the closest food and scale it up to make it more desireable
+    closestFoodDistances = min(foodDistances)
+    #print closestFoodDistance
+    closestFoodScore = closestFoodDistances * -500.0
+
+    return closestFoodScore
+
+
+  def getCapsuleScore(self, gameState):
+    #this is meant as an offensive capsule score
+
+    #This is for capsules we are trying to eat
+    if gameState.isOnRedTeam(self.index):
+      capsuleList = gameState.getBlueCapsules()
+    else:
+      capsuleList = gameState.getRedCapsules()
+    
+    distanceToCapsules = []
+    capsuleScore = 0.0
+    minCapsuleDistance = None 
+    
+    
+    for capsule in capsuleList:
+      distanceToCapsules.append(self.getMazeDistance(gameState.getAgentPosition(self.index), capsule))
+
+    if not len(distanceToCapsules) == 0:
+      minCapsuleDistance = min(distanceToCapsules)
+      # reward being close to ghosts and capsules
+      if minCapsuleDistance == 0:
+        capsuleScore = 500.0
+      else:
+        capsuleScore = 2.80 * (1.0/(minCapsuleDistance))#+closestGhostDistance))
+    else:
+      capsuleScore = 20.0 #20.0
+
+    return capsuleScore
+    
 
   #################
   # HELPER METHOD #

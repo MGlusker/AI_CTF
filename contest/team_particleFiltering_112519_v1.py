@@ -51,7 +51,6 @@ class JointParticleFilter:
   """
 
   def __init__(self, numParticles=1000):
-      
       self.setNumParticles(numParticles)
 
   def setNumParticles(self, numParticles):
@@ -79,7 +78,6 @@ class JointParticleFilter:
         startPos.append(gameState.getInitialAgentPosition(opponentAgentIndex))
 
       #this turns the list of startPos into a tuple
-      #!!!!not sure we need this!!!!
       startPos = tuple(startPos)
 
       #Each particle is of the format: [enemy agent 0 location, enemy agent 1 location]
@@ -126,11 +124,9 @@ class JointParticleFilter:
         pos.append(gameState.getAgentPosition(opponentAgentIndex))
 
         #If the pos is None, add to array to signal that we don't know where this agent is 
-        #print index, pos
         if pos[index] == None:
           unknownParticleIndices.append(opponentAgentIndex)
 
-        #print index, pos, unknownParticleIndices
 
       #This returns an array of noisy Distances from our current agent
       noisyDistances = gameState.getAgentDistances()      
@@ -140,11 +136,6 @@ class JointParticleFilter:
       #this is what we will be calculating the true distance based on
       myPos = gameState.getAgentPosition(currentAgentIndex) 
 
-
-
-      # print "noisyDistances:", noisyDistances
-      # print "unknownParticleIndices length", len(unknownParticleIndices)
-      # print "enumerate", enumerate(unknownParticleIndices)
       #weighting the particles
       for index, p in enumerate(self.particles):
 
@@ -160,15 +151,8 @@ class JointParticleFilter:
 
           # weight each particle by the probability of getting to that position (use emission model)
           # account for our current belief distribution (evidence) at this point in time
-          #print noisyDistances[i]
           listOfLocationWeights.append(gameState.getDistanceProb(trueDistance, noisyDistances[opponentAgentIndex]))
 
-
-
-
-
-        #print "locationWeights Length:", len(listOfLocationWeights)
-        #print listOfLocationWeights
         if len(listOfLocationWeights) != 0:
             particleWeights.append(functools.reduce(lambda x,y: x*y, listOfLocationWeights))
         else:
@@ -182,31 +166,24 @@ class JointParticleFilter:
               particleWeights.append(0)
 
 
-
-
-
-
-      #print particleWeights
-      #print "number of particles", len(self.particles)
       # now create a counter and count up the particle weights observed
       particleDictionary = util.Counter()
-
-      #for i in range(self.numParticles): 
+ 
       for index, p in enumerate(self.particles):
           #particleDictionary[self.particles[i]] += particleWeights[i]
           particleDictionary[p] += particleWeights[index]
 
-      # print "particleDictionary", particleDictionary
-      #print "number of particles", len(self.particles)
 
       particleDictionary.normalize() 
       
-      if particleDictionary.totalCount() == 0:
-        print "initializeParticlesUniformly"
-        self.initializeParticlesUniformly(gameState)
-        #I'm not sure it makes sense to reinitialize the particles here
-        
 
+      if particleDictionary.totalCount() == 0:
+        
+        self.initializeParticlesUniformly(gameState)
+        #I'm not sure it makes sense to reinitialize the particles 
+        #It's necessary however otherwise the program crashes
+        #Does it make sense for our distribution to go to zero somtimes?
+        
       # otherwise, go ahead and resample based on our new beliefs 
       else:
           
@@ -215,14 +192,8 @@ class JointParticleFilter:
 
         # find each key, value pair in our counter
         keys, values = zip(*particleDictionary.items())
-        # print "Particle dictionary: ", particleDictionary
-        # print "length keys: ", len(keys)
-        # print keys
-        # print "length values: ", len(values)
-        # print values
-        # resample self.particles
-        self.particles = util.nSample(values, keys, self.numParticles)
 
+        self.particles = util.nSample(values, keys, self.numParticles)
 
 
   def elapseTime(self, gameState):
@@ -239,30 +210,18 @@ class JointParticleFilter:
       temp = []
       for opponentIndex in self.opponentAgents:
 
-        #This line from P4
-        #newPosDist = getPositionDistributionForGhost(setGhostPositions(gameState, newParticle), i, self.ghostAgents[i])
-
-
-
-        # loop through all agents that we can't see
-        # unknownAgentIndices refers to the indices of rhe agents more broadly
-        # this is different from 
         ourPostDist = self.getOpponentDist(gameState, newParticle, opponentIndex)
 
-        #print ourPostDist
-        #print ourPostDist.__class__ == Counter
         temp.append(util.sample(ourPostDist))
           
-
       newParticle = temp
       newParticles.append(tuple(newParticle))
     
     self.particles = newParticles
 
-  def getBeliefDistribution(self):
-   
-      # convert list of particles into a counter
 
+  def getBeliefDistribution(self):
+      # convert list of particles into a counter
       beliefs = util.Counter() 
 
       # count each unique position 
@@ -271,13 +230,13 @@ class JointParticleFilter:
       
       # normalize the count above
       beliefs.normalize()
-
       return beliefs
 
+  #This methods isonly slightly different from the above get belief distribution method
+  #Returns a slightly different formatted distribution for use in displaying the distribution on the map
   def modGetBeliefDistribution(self):
  
     # convert list of particles into a counter
-
     beliefsOpponentOne = util.Counter() 
     beliefsOpponentTwo = util.Counter() 
 
@@ -292,8 +251,9 @@ class JointParticleFilter:
 
     return [beliefsOpponentOne, beliefsOpponentTwo]
 
-  #HELPER METHODS FOR ELAPSE TIME
-
+  ##################################
+  # HELPER METHODS FOR ELAPSE TIME #
+  ##################################
 
   def getOpponentDist(self, gameState, particle, opponentIndex):
 
@@ -312,11 +272,6 @@ class JointParticleFilter:
       dist[pos] = prob
 
     return dist
-
-  #From p4 idk what this does - Martin
-  # One JointInference module is shared globally across instances of MarginalInference
-  #jointInference = JointParticleFilter()
-
 
   def setOpponentPositions(self, gameState, opponentPositions):
     "Sets the position of all opponent to the values in the particle"
@@ -338,9 +293,7 @@ class ReflexCaptureAgent(CaptureAgent):
   A base class for reflex agents that chooses score-maximizing actions
   """
 
-
   #Particle Filtering Stuff
-  
   jointInference = JointParticleFilter()
   
   #ef initialize(self, ourTeamAgents, opponentAgents, gameState, legalPositions):
@@ -354,15 +307,15 @@ class ReflexCaptureAgent(CaptureAgent):
 
     self.start = gameState.getAgentPosition(self.index)
     CaptureAgent.registerInitialState(self, gameState)
-    self.ourTeamAgents = self.getTeam(gameState)
-    self.opponentAgents = self.getOpponents(gameState)
+
 
   def chooseAction(self, gameState):
     """
     Picks among the actions with the highest Q(s,a).
     """
-
-    #PARTICLE FILTERING!!
+    ######################
+    # PARTICLE FILTERING #
+    ######################
 
     print "chooseAction"
     self.jointInference.observeState(gameState, self.index)
@@ -373,6 +326,10 @@ class ReflexCaptureAgent(CaptureAgent):
 
     self.jointInference.elapseTime(gameState)
 
+    ##########################
+    # END PARTICLE FILTERING #
+    ##########################
+    
 
     actions = gameState.getLegalActions(self.index)
 

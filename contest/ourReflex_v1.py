@@ -71,7 +71,7 @@ class ReflexCaptureAgent(CaptureAgent):
     """
     Picks among the actions with the highest Q(s,a).
     """
-    actions = gameState.getLegalActions(self.indexsel)
+    actions = gameState.getLegalActions(self.index)
 
     # You can profile your evaluation time by uncommenting these lines
     # start = time.time()
@@ -116,6 +116,7 @@ class ReflexCaptureAgent(CaptureAgent):
     weights = self.getWeights(gameState, action)
     return features * weights
 
+  
   def getFeatures(self, gameState, action):
     """
     Returns a counter of features for the state

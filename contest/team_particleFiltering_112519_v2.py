@@ -362,7 +362,7 @@ class BaseCaptureAgent(CaptureAgent):
     ourSuccessorsEvalScores = [] #list of our GameStates' returned scores
 
 
-    ourLegalActions = probableGameState .getLegalActions(self.expectimaxAgents[0])
+    ourLegalActions = probableGameState.getLegalActions(self.expectimaxAgents[0])
 
     for action in ourLegalActions:
       ourSuccessors.append(probableGameState.generateSuccessor(self.expectimaxAgents[0], action))
@@ -371,6 +371,7 @@ class BaseCaptureAgent(CaptureAgent):
       ourSuccessorsEvalScores.append(self.getActionRecursiveHelper(child, 1))
 
     print ourSuccessorsEvalScores
+    print "action chosen: ", ourLegalActions[ourSuccessorsEvalScores.index(max(ourSuccessorsEvalScores))]
     return ourLegalActions[ourSuccessorsEvalScores.index(max(ourSuccessorsEvalScores))]
    
 

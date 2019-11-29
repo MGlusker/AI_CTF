@@ -541,7 +541,7 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     features["foodScore"] = foodScore
     features["capsuleScore"] = capsuleScore
     features["enemyClosenessScore"] = enemyClosenessScore
-    features["scoreOfGame"] = self.getScore()
+    features["scoreOfGame"] = self.getScore(currentGameState)
 
     return features
 
@@ -559,6 +559,65 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
   #################################
   ## helper methods for features ##
   #################################
+  
+  def getMySide(self, gameState):
+    """
+    this returns a list with all of the accesible poisitions 
+    on our side of the map (checks to see if we're red or blue team)
+    """
+
+    mapWidth = gameState.getWalls().width
+    mapHeight = gameState.getWalls().height
+    mySideList = []
+
+    #red is always on the left; blue always on right 
+    # if we're on the RED team 
+    #print gameState.isOnRedTeam(self.index)
+    if gameState.isOnRedTeam(self.index):
+      x = (mapWidth/2)-1
+      mySideX = x
+      for y in range(mapHeight):
+        if not gameState.hasWall(x,y):
+          mySideList.append((x,y))
+
+    # if we're on the BLUE team
+    #print not gameState.isOnRedTeam(self.index)
+    if not gameState.isOnRedTeam(self.index):
+      x = (mapWidth/2)
+      mySideX = x
+      #print "BLUE"
+      for y in range(mapHeight):
+        if not gameState.hasWall(x,y):
+          mySideList.append((x,y))
+
+    return mySideList
+
+  def areWeOnOurSide(self, gameState):
+    """
+    this returns true if our agent is on our side
+    and false if our agent is on the enemy's side
+    """ 
+    myPos = gameState.getAgentPosition(self.index)
+    mapWidth = gameState.getWalls().width
+    mapHeight = gameState.getWalls().height
+
+    # if we're on the red team
+    if gameState.isOnRedTeam(self.index):
+      x = (mapWidth/2)-1
+      mySideX = x
+   
+    # if we're on the blue team 
+    if not gameState.isOnRedTeam(self.index):
+      x = (mapWidth/2)
+      mySideX = x
+
+    onMySide = True 
+    if myPos[0] >= mySideX and gameState.isOnRedTeam(self.index):
+      onMySide = False
+    if myPos[0] <= mySideX and not gameState.isOnRedTeam(self.index):
+      onMySide = False
+
+    return onMySide
 
   def getPositions(self, currentGameState, findOurs):
     """
@@ -599,40 +658,53 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     # list of food we're trying to eat
     foodList = self.getFood(gameState).asList()
 
+    # a list of all accesible poisitions on our side of the map
+    mySideList = self.getMySide(gameState)
 
     foodDistances = []
 
     # add the distance from every food pellet to our agent
-    for food in foodList:   
-
-      
+    for food in foodList:        
       foodDistances.append(self.getMazeDistance(gameState.getAgentPosition(self.index), food))
-
 
 
     # if no food left in the game this is good 
     if len(foodList) == 0:
       foodScore = 1000000
 
+    # otherwise there's still food left
     else:
-      # reward states with less food 
-      foodLeftScore = 2.5 * (1.0/len(foodList))
-
+      
       # find the closest distance to a pellet of food
       closestFoodDistance = min(foodDistances)
 
-      # and reward states that have food that is close by
-      
-      # if food is right next to us this is really good
-      if closestFoodDistance == 0:
-        closestFoodScore = 200.0
+      # first check to see if our agent is carrying 3 food (or more) 
+      # and there's no other food close by, then incentivize going home (to our side)
+      if gameState.getAgentState(self.index).numCarrying > 3 and closestFoodDistance > 3:
+        # find the shortest distance back to our side
+        minDistanceHome = min([self.getMazeDistance(gameState.getAgentPosition(self.index), position) for position in mySideList])
 
-      # otherwise make it so the closer the food, the higher the score
-      else: 
-        closestFoodScore = 2.80 * (1.0/closestFoodDistance)
+        # make it better to be closer to home
+        foodScore = 2.80 * (1.0/minDistanceHome)
+        
+     
+      # otherwise, we want to eat more food so reward states that are close to food
+      else:  
 
-      # create a final food score
-      foodScore = closestFoodScore + foodLeftScore 
+        # reward states with less food 
+        foodLeftScore = 2.5 * (1.0/len(foodList))
+
+        # reward states that have food that is close by:
+        # if food is right next to us this is really good
+        if closestFoodDistance == 0:
+          closestFoodScore = 200.0
+
+        # otherwise make it so the closer the food, the higher the score
+        else: 
+          closestFoodScore = 2.80 * (1.0/closestFoodDistance)
+
+        # create a final food score
+        foodScore = closestFoodScore + foodLeftScore 
 
     return foodScore
 
@@ -673,9 +745,16 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     return capsuleScore
     
   def getEnemyClosenessScore(self, gameState): 
-    # punish being close to enemies
-  
-    enemyPositions = self.getPositions(currentGameState, False)
+    """
+    punish our agent being close to enemies 
+    (unless we're on our own side)
+    """
+
+    # a boolean telling us if we're on our own side or not
+    onMySide = self.areWeOnOurSide(gameState)
+
+    # a list of the enemy positions (as determined by particleFiltering)
+    enemyPositions = self.getPositions(gameState, False)
     
     distanceToEnemies = []
 
@@ -687,12 +766,24 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
 
     closestEnemyDistance = min(distanceToEnemies)
 
-    if closestEnemyDistance == 0.0:
-      enemyClosenessScore = -100.0
+    
+    # if we're on our side it's good to be close to enemies
+    if onMySide:
+      if closestEnemyDistance == 0.0:
+        enemyClosenessScore = -100.0
 
+      else:
+        enemyClosenessScore = -2.0 * (1.0/closestEnemyDistance)
+
+    # otherwise it's not good to be close to enemies
     else:
-      enemyClosenessScore = -2.0 * (1.0/closestEnemyDistance)
+      if closestEnemyDistance == 0.0:
+        enemyClosenessScore = -100.0
 
+      else:
+        enemyClosenessScore = -2.0 * (1.0/closestEnemyDistance)
+
+    
     return enemyClosenessScore
 
 #######################

@@ -302,6 +302,7 @@ class BaseCaptureAgent(CaptureAgent):
   #ef initialize(self, ourTeamAgents, opponentAgents, gameState, legalPositions):
   def registerInitialState(self, gameState):
 
+    CaptureAgent.registerInitialState(self, gameState)
     legalPositions = self.findLegalPositions(gameState)
     self.ourTeamAgents = self.getTeam(gameState)
     self.opponentAgents = self.getOpponents(gameState)
@@ -309,7 +310,7 @@ class BaseCaptureAgent(CaptureAgent):
     BaseCaptureAgent.jointInference.initialize(self.ourTeamAgents, self.opponentAgents, gameState, legalPositions)
 
     self.start = gameState.getAgentPosition(self.index)
-    CaptureAgent.registerInitialState(self, gameState)
+    
 
 
   def chooseAction(self, gameState):

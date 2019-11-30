@@ -22,7 +22,7 @@ import game
 #################
 
 def createTeam(firstIndex, secondIndex, isRed,
-               first = 'OffensiveCaptureAgent', second = 'DefensiveCaptureAgent'):
+               first = 'OffensiveCaptureAgent', second = 'OffensiveCaptureAgent'):
   """
   This function should return a list of two agents that will form the
   team, initialized using firstIndex and secondIndex as their agent
@@ -269,14 +269,11 @@ class JointParticleFilter:
     opponentLegalActions = opponentPositionGameState.getLegalActions(opponentIndex)
     prob = float(1)/float(len(opponentLegalActions))
     
-    if opponentIndex in self.opponentAgents:
-      for action in opponentLegalActions:
-        successor = opponentPositionGameState.generateSuccessor(opponentIndex, action)
-        pos = successor.getAgentState(opponentIndex).getPosition()
-        dist[pos] = prob
-    else:
-      print "This was the opponentIndex:", opponentIndex
-      print "I think something went wrong"
+
+    for action in opponentLegalActions:
+      successor = opponentPositionGameState.generateSuccessor(opponentIndex, action)
+      pos = successor.getAgentState(opponentIndex).getPosition()
+      dist[pos] = prob
 
     return dist
 
@@ -323,7 +320,6 @@ class BaseCaptureAgent(CaptureAgent):
 
     # this is opposite of above
     self.opponentAgents = self.getOpponents(gameState)
-    self.mySideList = self.getMySide(gameState)
 
 
     BaseCaptureAgent.jointInference.initialize(self.ourTeamAgents, self.opponentAgents, gameState, legalPositions)
@@ -350,20 +346,19 @@ class BaseCaptureAgent(CaptureAgent):
     self.displayDistributionsOverPositions(displayDist)
 
     self.jointInference.elapseTime(gameState)
-    #print "Particle Filtering time:", time.time() - start
+    print "Particle Filtering time:", time.time() - start
 
     ##########################
     # END PARTICLE FILTERING #
     ##########################
 
   
-    print "It's agent #", self.index, "'s turn"
-    action = self.expectimaxGetAction(gameState, dist, self.index)
     
+    action = self.expectimaxGetAction(gameState, dist)
     print "Total time:", time.time() - start
     return action
 
-  def expectimaxGetAction(self, gameState, dist, currentAgentIndex):
+  def expectimaxGetAction(self, gameState, dist):
     """
       Returns the expectimax action using self.depth and self.evaluationFunction
     """
@@ -383,14 +378,13 @@ class BaseCaptureAgent(CaptureAgent):
     ourSuccessorsEvalScores = [] #list of our GameStates' returned scores
 
 
-    ourLegalActions = probableGameState.getLegalActions(currentAgentIndex)
+    ourLegalActions = probableGameState.getLegalActions(self.expectimaxAgents[0])
 
     for action in ourLegalActions:
-      ourSuccessors.append(probableGameState.generateSuccessor(currentAgentIndex, action))
+      ourSuccessors.append(probableGameState.generateSuccessor(self.expectimaxAgents[0], action))
     
-    print "currentAgentIndex", currentAgentIndex
     for child in ourSuccessors:
-      ourSuccessorsEvalScores.append(self.getActionRecursiveHelper(child, 1, currentAgentIndex+1))
+      ourSuccessorsEvalScores.append(self.getActionRecursiveHelper(child, 1))
 
     print ourSuccessorsEvalScores
     print "action chosen: ", ourLegalActions[ourSuccessorsEvalScores.index(max(ourSuccessorsEvalScores))]
@@ -398,19 +392,16 @@ class BaseCaptureAgent(CaptureAgent):
    
 
 
-  def getActionRecursiveHelper(self, gameState, depthCounter, currentAgentIndex):
+  def getActionRecursiveHelper(self, gameState, depthCounter):
 
 
     NUM_AGENTS = 4
 
     #In terms of moves, not plies
-    DEPTH = 4
+    DEPTH = 8
     
-    if currentAgentIndex>=4:
-      #print "index reset"
-      currentAgentIndex = 0
+    agentIndex = depthCounter%NUM_AGENTS
 
-    #print currentAgentIndex
     ############################################################
     # NEED TO CHANGE depth variable if we want variable depth  #
     ############################################################
@@ -426,29 +417,26 @@ class BaseCaptureAgent(CaptureAgent):
 
     # When it's our turn
     # This may need to be changed based on whose turn it
-    if(currentAgentIndex == self.ourTeamAgents[0] or currentAgentIndex == self.ourTeamAgents[1]): 
+    if(agentIndex == 0 or agentIndex == 1): 
 
       ourSuccessors = [] #list of GameStates
       ourSuccessorsEvalScores = [] #list of GameStates' returned scores
 
-      ourLegalActions = gameState.getLegalActions(currentAgentIndex)
+      ourLegalActions = gameState.getLegalActions(self.expectimaxAgents[agentIndex])
 
       for action in ourLegalActions:
-        ourSuccessors.append(gameState.generateSuccessor(currentAgentIndex, action))
+        ourSuccessors.append(gameState.generateSuccessor(self.expectimaxAgents[agentIndex], action))
 
       currentEvalScores = util.Counter()
       for child in ourSuccessors:
         currentEvalScores[child] = (self.evaluationFunction(gameState))
 
       # only add best 3 states to fully evaluate
-      #topThree = currentEvalScores.sortedKeys()[0:3]
+      topThree = currentEvalScores.sortedKeys()[0:2]
 
       # only fully explores top 3 (out of 5) moves
-      # for successor in topThree:
-      #     ourSuccessorsEvalScores.append(self.getActionRecursiveHelper(successor, depthCounter+1, currentAgentIndex +1))
-
-      for successor in ourSuccessors:
-          ourSuccessorsEvalScores.append(self.getActionRecursiveHelper(successor, depthCounter+1, currentAgentIndex +1))
+      for successor in topThree:
+          ourSuccessorsEvalScores.append(self.getActionRecursiveHelper(child, depthCounter+1))
 
       return max(ourSuccessorsEvalScores)
 
@@ -459,21 +447,21 @@ class BaseCaptureAgent(CaptureAgent):
       opponentSuccessors = [] #list of GameStates
       opponentSuccessorsEvalScores = [] #list of GameStates returned scores
 
-      opponentLegalActions = gameState.getLegalActions(currentAgentIndex)
+      opponentLegalActions = gameState.getLegalActions(self.expectimaxAgents[agentIndex])
 
       for action in opponentLegalActions:
-        opponentSuccessors.append(gameState.generateSuccessor(currentAgentIndex, action))
+        opponentSuccessors.append(gameState.generateSuccessor(self.expectimaxAgents[agentIndex], action))
 
       currentEvalScores = util.Counter()
       for child in opponentSuccessors:
         currentEvalScores[child] = (self.evaluationFunction(gameState))
 
       # only add best 3 states to fully evaluate
-      #topThree = currentEvalScores.sortedKeys()[1:5]
+      topThree = currentEvalScores.sortedKeys()[0:2]
 
       # only fully explores top 3 (out of 5) moves
-      for successor in opponentSuccessors:
-          opponentSuccessorsEvalScores.append(self.getActionRecursiveHelper(successor, depthCounter+1, currentAgentIndex +1))
+      for successor in topThree:
+          opponentSuccessorsEvalScores.append(self.getActionRecursiveHelper(child, depthCounter+1))
     
       # averages = []
       # total = sum(opponentSuccessorsEvalScores)
@@ -523,38 +511,6 @@ class BaseCaptureAgent(CaptureAgent):
         gameState.data.agentStates[self.opponentAgents[index]] = game.AgentState(conf, False)
     return gameState
 
-  def getMySide(self, gameState):
-    """
-    this returns a list with all of the accesible poisitions 
-    on our side of the map (checks to see if we're red or blue team)
-    """
-
-    mapWidth = gameState.getWalls().width
-    mapHeight = gameState.getWalls().height
-    mySideList = []
-
-    #red is always on the left; blue always on right 
-    # if we're on the RED team 
-    #print gameState.isOnRedTeam(self.index)
-    if gameState.isOnRedTeam(self.index):
-      x = (mapWidth/2)-1
-      mySideX = x
-      for y in range(mapHeight):
-        if not gameState.hasWall(x,y):
-          mySideList.append((x,y))
-
-    # if we're on the BLUE team
-    #print not gameState.isOnRedTeam(self.index)
-    if not gameState.isOnRedTeam(self.index):
-      x = (mapWidth/2)
-      mySideX = x
-      #print "BLUE"
-      for y in range(mapHeight):
-        if not gameState.hasWall(x,y):
-          mySideList.append((x,y))
-
-    return mySideList
-
 
 
 #######################
@@ -585,7 +541,7 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     features["foodScore"] = foodScore
     features["capsuleScore"] = capsuleScore
     features["enemyClosenessScore"] = enemyClosenessScore
-    features["scoreOfGame"] = self.getScore(currentGameState)
+    features["scoreOfGame"] = self.getScore()
 
     return features
 
@@ -600,10 +556,37 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
       
     return Weights
 
-  ###################################
-  ## methods to get feature scores ##
-  ###################################
-  
+  #################################
+  ## helper methods for features ##
+  #################################
+
+  def getPositions(self, currentGameState, findOurs):
+    """
+    This takes a gameState where we know everyones position
+    and returns either enemy or our positions in a list
+
+    If findOurs is true then this returns our positions,
+    if false then returns enemy positions
+    """
+    allPositions = [currentGameState.getAgentPosition(i) for i in range(4)]
+    
+
+    ourPositions = []
+    enemyPositions = []
+    
+    # want to have the correct positions assigned to the correct teams
+    for i in range(4):
+      if i in self.ourTeamAgents:
+        ourPositions.append(allPositions[i])
+      else:
+        enemyPositions.append(allPositions[i])
+
+    if findOurs:
+      return ourPositions
+    else:
+      return enemyPositions
+
+ 
   def getFoodScore(self, gameState):
     """
     Returns a score based on how much food is on the board 
@@ -616,53 +599,40 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     # list of food we're trying to eat
     foodList = self.getFood(gameState).asList()
 
-    # a list of all accesible poisitions on our side of the map
-    mySideList = self.mySideList
 
     foodDistances = []
 
     # add the distance from every food pellet to our agent
-    for food in foodList:        
+    for food in foodList:   
+
+      
       foodDistances.append(self.getMazeDistance(gameState.getAgentPosition(self.index), food))
+
 
 
     # if no food left in the game this is good 
     if len(foodList) == 0:
       foodScore = 1000000
 
-    # otherwise there's still food left
     else:
-      
+      # reward states with less food 
+      foodLeftScore = 2.5 * (1.0/len(foodList))
+
       # find the closest distance to a pellet of food
       closestFoodDistance = min(foodDistances)
 
-      # first check to see if our agent is carrying 3 food (or more) 
-      # and there's no other food close by, then incentivize going home (to our side)
-      if gameState.getAgentState(self.index).numCarrying > 3 and closestFoodDistance > 3:
-        # find the shortest distance back to our side
-        minDistanceHome = min([self.getMazeDistance(gameState.getAgentPosition(self.index), position) for position in mySideList])
+      # and reward states that have food that is close by
+      
+      # if food is right next to us this is really good
+      if closestFoodDistance == 0:
+        closestFoodScore = 200.0
 
-        # make it better to be closer to home
-        foodScore = 2.80 * (1.0/minDistanceHome)
-        
-     
-      # otherwise, we want to eat more food so reward states that are close to food
-      else:  
+      # otherwise make it so the closer the food, the higher the score
+      else: 
+        closestFoodScore = 2.80 * (1.0/closestFoodDistance)
 
-        # reward states with less food 
-        foodLeftScore = 2.5 * (1.0/len(foodList))
-
-        # reward states that have food that is close by:
-        # if food is right next to us this is really good
-        if closestFoodDistance == 0:
-          closestFoodScore = 200.0
-
-        # otherwise make it so the closer the food, the higher the score
-        else: 
-          closestFoodScore = 2.80 * (1.0/closestFoodDistance)
-
-        # create a final food score
-        foodScore = closestFoodScore + foodLeftScore 
+      # create a final food score
+      foodScore = closestFoodScore + foodLeftScore 
 
     return foodScore
 
@@ -703,16 +673,9 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     return capsuleScore
     
   def getEnemyClosenessScore(self, gameState): 
-    """
-    punish our agent being close to enemies 
-    (unless we're on our own side)
-    """
-
-    # a boolean telling us if we're on our own side or not
-    onMySide = self.areWeOnOurSide(gameState)
-
-    # a list of the enemy positions (as determined by particleFiltering)
-    enemyPositions = self.getPositions(gameState, False)
+    # punish being close to enemies
+  
+    enemyPositions = self.getPositions(currentGameState, False)
     
     distanceToEnemies = []
 
@@ -724,85 +687,13 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
 
     closestEnemyDistance = min(distanceToEnemies)
 
-    
-    # if we're on our side it's good to be close to enemies
-    if onMySide:
-      if closestEnemyDistance == 0.0:
-        enemyClosenessScore = 100.0
+    if closestEnemyDistance == 0.0:
+      enemyClosenessScore = -100.0
 
-      else:
-        enemyClosenessScore = 2.0 * (1.0/closestEnemyDistance)
-
-    # otherwise it's not good to be close to enemies
     else:
-      if closestEnemyDistance == 0.0:
-        enemyClosenessScore = -100.0
+      enemyClosenessScore = -2.0 * (1.0/closestEnemyDistance)
 
-      else:
-        enemyClosenessScore = -2.0 * (1.0/closestEnemyDistance)
-
-    
     return enemyClosenessScore
-
-
-  #################################
-  ## helper methods for features ##
-  #################################
-
-
-  def areWeOnOurSide(self, gameState):
-    """
-    this returns true if our agent is on our side
-    and false if our agent is on the enemy's side
-    """ 
-    myPos = gameState.getAgentPosition(self.index)
-    mapWidth = gameState.getWalls().width
-    mapHeight = gameState.getWalls().height
-
-    # if we're on the red team
-    if gameState.isOnRedTeam(self.index):
-      x = (mapWidth/2)-1
-      mySideX = x
-   
-    # if we're on the blue team 
-    if not gameState.isOnRedTeam(self.index):
-      x = (mapWidth/2)
-      mySideX = x
-
-    onMySide = True 
-    if myPos[0] >= mySideX and gameState.isOnRedTeam(self.index):
-      onMySide = False
-    if myPos[0] <= mySideX and not gameState.isOnRedTeam(self.index):
-      onMySide = False
-
-    return onMySide
-
-  def getPositions(self, currentGameState, findOurs):
-    """
-    This takes a gameState where we know everyones position
-    and returns either enemy or our positions in a list
-
-    If findOurs is true then this returns our positions,
-    if false then returns enemy positions
-    """
-    allPositions = [currentGameState.getAgentPosition(i) for i in range(4)]
-    
-
-    ourPositions = []
-    enemyPositions = []
-    
-    # want to have the correct positions assigned to the correct teams
-    for i in range(4):
-      if i in self.ourTeamAgents:
-        ourPositions.append(allPositions[i])
-      else:
-        enemyPositions.append(allPositions[i])
-
-    if findOurs:
-      return ourPositions
-    else:
-      return enemyPositions
-
 
 #######################
 ##  Defensive Agent  ##
@@ -810,302 +701,47 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
 
 class DefensiveCaptureAgent(BaseCaptureAgent):
 
-  def getFeatures(self, currentGameState):
+  def getFeatures(self, gameState):
 
     features = util.Counter()
 
-    #ourPositions = self.getPositions(currentGameState, True)
-    #enemyPositions = self.getPositions(currentGameState, False)
-    
-    
-    
-    #currentEnemyScaredTimes = [enemyState.scaredTimer for enemyState in enemyCurrentStates]
-
-    #print currentEnemyScaredTimes
-
-    foodScore = self.getFoodScore(currentGameState)
-    capsuleScore = self.getCapsuleScore(currentGameState)
-    numInvadersScore = self.getNumInvadersScore(currentGameState)
-    enemyClosenessScore = self.getEnemyClosenessScore(currentGameState)
-
-
-    features["foodScore"] = foodScore
-    features["capsuleScore"] = capsuleScore
-    features["numInvadersScore"] = numInvadersScore
-    features["enemyClosenessScore"] = enemyClosenessScore
-    features["scoreOfGame"] = self.getScore(currentGameState)
-
-    return features
-
-  
-  def getWeights(self, gameState):
-    # foodScore is positive
-    # capsuleScore is positive
-    # numInvadersScore is negative if we have invaders, positive if we don't
-    # enemyClosenessScore is negative
-    # socreOfGame is negative if losing, positive if winning
-    Weights = {"foodScore": 100, "capsuleScore": 10, "numInvadersScore": 100, "enemyClosenessScore": 1, "scoreOfGame": 1}
-
-      
-    return Weights
-
-  #######################################
-  ## helper methods for feature scores ##
-  #######################################
-   
   def getFoodScore(self, gameState):
     """
     Returns a score based on how much food is on the board 
     and based on how close enemies are to food
-    (more food is better and being closer to food is worse)
+    (more food is better and enemies further from food is better)
     """
+    foodList = []
 
     foodScore = 0.0
 
-    # list of food we're defending
+    # update the foodList for the food we're trying to defend
     foodList = self.getFoodYouAreDefending(gameState).asList()
 
-    enemyPositions = self.getPositions(gameState, False)
-
-    closestEnemyDistance = min(enemyPositions)
-
-    # a list of all accesible poisitions on our side of the map
-    mySideList = self.getMySide(gameState)
-
     foodDistances = []
+    for food in foodList:    
+      foodDistances.append(self.getMazeDistance(gameState.getAgentPosition(self.index), food))
 
-    # it's bad if enemies are close to our food 
-
-    # add the distance from every food pellet to each enemy
-    for food in foodList:     
-      for enemy in enemyPositions:   
-        foodDistances.append(self.getMazeDistance(enemy, food))
-
-
-    # if no food left in the game this is bad 
+    # if no food left in the game 
     if len(foodList) == 0:
-      foodScore = -1000000
-
-    # otherwise there's still food left
-    else:
-      
-      # find the closest distance of an enemy to a pellet of food
-      closestFoodDistance = min(foodDistances)
-              
-      # reward states with more food 
-      foodLeftScore = len(foodList)
-
-      # punish states that have food close to an enemy:
-      # if food is right next to enemy this is really bad
-      if closestFoodDistance == 0:
-        closestFoodScore = -200.0
-
-      # otherwise make it so the further the food, the higher the score
-      else: 
-        closestFoodScore = closestFoodDistance
-
-      # create a final food score
-      foodScore = closestFoodScore + foodLeftScore 
-
-    return foodScore
+      return 1000000
 
 
-  def getCapsuleScore(self, gameState):
-    #this is meant as an defensive capsule score
 
-    #This is for capsules we are trying to eat
+    #foodDistances = sorted(foodDistances)
+    #print foodDistances
+    # get the closest food and scale it up to make it more desireable
+    closestFoodDistances = min(foodDistances)
+    #print closestFoodDistance
+    closestFoodScore = closestFoodDistances * -500.0
 
-    capsuleScore = 0.0
+    return closestFoodScore
+ 
+  def getWeights(self, gameState):
+    Weights = {'numInvaders': -1000, 'onDefense': 100, 'invaderDistance': -10, 'stop': -100, 'reverse': -2}
 
-    capsuleList = self.getCapsulesYouAreDefending(gameState)
-    enemyPositions = self.getPositions(gameState, False)
+    return Weights
 
-    distanceToCapsules = []
-   
-    #minCapsuleDistance = None 
-    
-    # it's bad if enemies are close to our pellets 
-    # add the distance from every food capsule to each enemy
-    
-    for capsule in capsuleList:
-      for enemy in enemyPositions:
-        distanceToCapsules.append(self.getMazeDistance(enemy, capsule))
-
-    # if no capsules left in game this is bad
-    if len(distanceToCapsules) == 0:
-      capsuleScore = -20.0
-
-    # otherwise reward states with more capsules 
-    else: 
-      minCapsuleDistance = min(distanceToCapsules)
-      
-      # punish enemy being close to capsule
-      if minCapsuleDistance == 0:
-        capsuleScore = -500.0
-      
-      # reward enemy being far from capsules
-      else:
-        capsuleScore = (minCapsuleDistance) #+closestGhostDistance))
-    
-
-    return capsuleScore
-    
-  
-  def getNumInvadersScore(self, gameState):
-    """
-    counts how many invaders are on our side and returns
-    a lower score for more invaders
-    """
-
-    enemyPositions = self.getPositions(gameState, False)
-
-    # count how many invaders are on our side
-    numInvaders = 0
-
-    # a list of all accesible poisitions on our side of the map
-    mySideList = self.getMySide(gameState)
-
-    for enemy in enemyPositions:
-      for position in mySideList:
-        if enemy == position:
-          numInvaders += 1
-
-
-    return numInvaders * -500 
-
-     
-
-
-  def getEnemyClosenessScore(self, gameState): 
-    """
-    reward our agent being close to invaders 
-    (unless we're on their side)
-    """
-
-    # a boolean telling us if we're on our own side or not
-    onMySide = self.areWeOnOurSide(gameState)
-
-    # a list of the enemy positions (as determined by particleFiltering)
-    enemyPositions = self.getPositions(gameState, False)
-    
-    distanceToEnemies = []
-
-    enemyClosenessScore = 0.0
-
-    # find distance to each invader
-    for enemy in enemyPositions:
-      distanceToEnemies.append(self.getMazeDistance(gameState.getAgentPosition(self.index), enemy))
-
-    closestEnemyDistance = min(distanceToEnemies)
-
-    
-    # if we're on our side it's good to be close to enemies
-    if onMySide:
-      if closestEnemyDistance == 0.0:
-        enemyClosenessScore = 100.0
-
-      else:
-        enemyClosenessScore = 2.0 * (1.0/closestEnemyDistance)
-
-    # otherwise it's not good to be close to enemies
-    else:
-      if closestEnemyDistance == 0.0:
-        enemyClosenessScore = -100.0
-
-      else:
-        enemyClosenessScore = -2.0 * (1.0/closestEnemyDistance)
-
-    
-    return enemyClosenessScore
-
-  #################################
-  ## helper methods for features ##
-  #################################
-
-  def getMySide(self, gameState):
-    """
-    this returns a list with all of the accesible poisitions 
-    on our side of the map (checks to see if we're red or blue team)
-    """
-
-    mapWidth = gameState.getWalls().width
-    mapHeight = gameState.getWalls().height
-    mySideList = []
-
-    #red is always on the left; blue always on right 
-    # if we're on the RED team 
-    #print gameState.isOnRedTeam(self.index)
-    if gameState.isOnRedTeam(self.index):
-      x = (mapWidth/2)-1
-      mySideX = x
-      for y in range(mapHeight):
-        if not gameState.hasWall(x,y):
-          mySideList.append((x,y))
-
-    # if we're on the BLUE team
-    #print not gameState.isOnRedTeam(self.index)
-    if not gameState.isOnRedTeam(self.index):
-      x = (mapWidth/2)
-      mySideX = x
-      #print "BLUE"
-      for y in range(mapHeight):
-        if not gameState.hasWall(x,y):
-          mySideList.append((x,y))
-
-    return mySideList
-
-  def areWeOnOurSide(self, gameState):
-    """
-    this returns true if our agent is on our side
-    and false if our agent is on the enemy's side
-    """ 
-    myPos = gameState.getAgentPosition(self.index)
-    mapWidth = gameState.getWalls().width
-    mapHeight = gameState.getWalls().height
-
-    # if we're on the red team
-    if gameState.isOnRedTeam(self.index):
-      x = (mapWidth/2)-1
-      mySideX = x
-   
-    # if we're on the blue team 
-    if not gameState.isOnRedTeam(self.index):
-      x = (mapWidth/2)
-      mySideX = x
-
-    onMySide = True 
-    if myPos[0] >= mySideX and gameState.isOnRedTeam(self.index):
-      onMySide = False
-    if myPos[0] <= mySideX and not gameState.isOnRedTeam(self.index):
-      onMySide = False
-
-    return onMySide
-
-  def getPositions(self, currentGameState, findOurs):
-    """
-    This takes a gameState where we know everyones position
-    and returns either enemy or our positions in a list
-
-    If findOurs is true then this returns our positions,
-    if false then returns enemy positions
-    """
-    allPositions = [currentGameState.getAgentPosition(i) for i in range(4)]
-    
-
-    ourPositions = []
-    enemyPositions = []
-    
-    # want to have the correct positions assigned to the correct teams
-    for i in range(4):
-      if i in self.ourTeamAgents:
-        ourPositions.append(allPositions[i])
-      else:
-        enemyPositions.append(allPositions[i])
-
-    if findOurs:
-      return ourPositions
-    else:
-      return enemyPositions
   
           
 

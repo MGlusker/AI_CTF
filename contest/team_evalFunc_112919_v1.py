@@ -587,6 +587,13 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     features["enemyClosenessScore"] = enemyClosenessScore
     features["scoreOfGame"] = self.getScore(currentGameState)
 
+    """
+    print "FOOD: ", 100*foodScore
+    print "CAPSULE: ", 10*capsuleScore
+    print "ENEMY: ", 1*enemyClosenessScore
+    print "ACTUAL SCORE: ", 1*self.getScore(currentGameState)
+    """
+
     return features
 
   
@@ -595,7 +602,7 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     # capsuleScore is positive
     # enemyClosenessScore is negative
     # socreOfGame is negative if losing, positive if winning
-    Weights = {"foodScore": 100, "capsuleScore": 10, "enemyClosenessScore": 1, "scoreOfGame": 1}
+    Weights = {"foodScore": 10, "capsuleScore": 10, "enemyClosenessScore": 10, "scoreOfGame": 1000}
 
       
     return Weights
@@ -616,8 +623,9 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     # list of food we're trying to eat
     foodList = self.getFood(gameState).asList()
 
+
     # a list of all accesible poisitions on our side of the map
-    mySideList = self.mySideList
+    mySideList = self.getMySide(gameState)
 
     foodDistances = []
 
@@ -625,7 +633,8 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     for food in foodList:        
       foodDistances.append(self.getMazeDistance(gameState.getAgentPosition(self.index), food))
 
-
+    
+    
     # if no food left in the game this is good 
     if len(foodList) == 0:
       foodScore = 1000000
@@ -636,6 +645,7 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
       # find the closest distance to a pellet of food
       closestFoodDistance = min(foodDistances)
 
+
       # first check to see if our agent is carrying 3 food (or more) 
       # and there's no other food close by, then incentivize going home (to our side)
       if gameState.getAgentState(self.index).numCarrying > 3 and closestFoodDistance > 3:
@@ -643,23 +653,23 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
         minDistanceHome = min([self.getMazeDistance(gameState.getAgentPosition(self.index), position) for position in mySideList])
 
         # make it better to be closer to home
-        foodScore = 2.80 * (1.0/minDistanceHome)
+        foodScore = 100.0 * (1.0/minDistanceHome)
         
      
       # otherwise, we want to eat more food so reward states that are close to food
       else:  
 
         # reward states with less food 
-        foodLeftScore = 2.5 * (1.0/len(foodList))
+        foodLeftScore = 100.0 * (1.0/len(foodList))
 
         # reward states that have food that is close by:
         # if food is right next to us this is really good
         if closestFoodDistance == 0:
-          closestFoodScore = 200.0
+          closestFoodScore = 400.0
 
         # otherwise make it so the closer the food, the higher the score
         else: 
-          closestFoodScore = 2.80 * (1.0/closestFoodDistance)
+          closestFoodScore = 100.0 * (1.0/closestFoodDistance)
 
         # create a final food score
         foodScore = closestFoodScore + foodLeftScore 
@@ -686,7 +696,7 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
 
     # if no capsules left in game this is good
     if len(distanceToCapsules) == 0:
-      capsuleScore = 20.0
+      capsuleScore = 50.0
 
     # otherwise reward states with fewer capsules 
     else: 
@@ -697,7 +707,7 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
         capsuleScore = 500.0
       
       else:
-        capsuleScore = 2.80 * (1.0/(minCapsuleDistance)) #+closestGhostDistance))
+        capsuleScore = 100.0 * (1.0/(minCapsuleDistance)) #+closestGhostDistance))
     
 
     return capsuleScore
@@ -728,20 +738,20 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     # if we're on our side it's good to be close to enemies
     if onMySide:
       if closestEnemyDistance == 0.0:
-        enemyClosenessScore = 100.0
+        enemyClosenessScore = 1000.0
 
       else:
-        enemyClosenessScore = 2.0 * (1.0/closestEnemyDistance)
+        enemyClosenessScore = 100.0 * (1.0/closestEnemyDistance)
 
     # otherwise it's not good to be close to enemies
     else:
       if closestEnemyDistance == 0.0:
-        enemyClosenessScore = -100.0
+        enemyClosenessScore = -1000.0
 
       else:
-        enemyClosenessScore = -2.0 * (1.0/closestEnemyDistance)
+        enemyClosenessScore = -100.0 * (1.0/closestEnemyDistance)
 
-    
+
     return enemyClosenessScore
 
 
@@ -835,6 +845,13 @@ class DefensiveCaptureAgent(BaseCaptureAgent):
     features["enemyClosenessScore"] = enemyClosenessScore
     features["scoreOfGame"] = self.getScore(currentGameState)
 
+    """
+    print "FOOD: ", foodScore
+    print "CAPSULE: ", capsuleScore
+    print "NUM INVADERS: ", numInvadersScore
+    print "ENEMY: ", enemyClosenessScore
+    print "ACTUAL SCORE: ", self.getScore(currentGameState)
+    """
     return features
 
   
@@ -844,7 +861,7 @@ class DefensiveCaptureAgent(BaseCaptureAgent):
     # numInvadersScore is negative if we have invaders, positive if we don't
     # enemyClosenessScore is negative
     # socreOfGame is negative if losing, positive if winning
-    Weights = {"foodScore": 100, "capsuleScore": 10, "numInvadersScore": 100, "enemyClosenessScore": 1, "scoreOfGame": 1}
+    Weights = {"foodScore": 10000, "capsuleScore": 10, "numInvadersScore": 100, "enemyClosenessScore": 100000, "scoreOfGame": 1}
 
       
     return Weights
@@ -892,17 +909,17 @@ class DefensiveCaptureAgent(BaseCaptureAgent):
       # find the closest distance of an enemy to a pellet of food
       closestFoodDistance = min(foodDistances)
               
-      # reward states with more food 
-      foodLeftScore = len(foodList)
+      # punish states with less food 
+      foodLeftScore = -100.0 * (1.0/len(foodList))
 
       # punish states that have food close to an enemy:
       # if food is right next to enemy this is really bad
       if closestFoodDistance == 0:
         closestFoodScore = -200.0
 
-      # otherwise make it so the further the food, the higher the score
+      # otherwise make it so the closer the food, the lower the score
       else: 
-        closestFoodScore = closestFoodDistance
+        closestFoodScore = -100.0 * (1.0/closestFoodDistance)
 
       # create a final food score
       foodScore = closestFoodScore + foodLeftScore 
@@ -933,19 +950,19 @@ class DefensiveCaptureAgent(BaseCaptureAgent):
 
     # if no capsules left in game this is bad
     if len(distanceToCapsules) == 0:
-      capsuleScore = -20.0
+      capsuleScore = -50.0
 
     # otherwise reward states with more capsules 
     else: 
       minCapsuleDistance = min(distanceToCapsules)
       
-      # punish enemy being close to capsule
+      # punish enemy being very close to capsule
       if minCapsuleDistance == 0:
         capsuleScore = -500.0
       
-      # reward enemy being far from capsules
+      # punish enemies being close to capsules
       else:
-        capsuleScore = (minCapsuleDistance) #+closestGhostDistance))
+        capsuleScore = -100.0 * (1.0/minCapsuleDistance) #+closestGhostDistance))
     
 
     return capsuleScore
@@ -969,6 +986,7 @@ class DefensiveCaptureAgent(BaseCaptureAgent):
       for position in mySideList:
         if enemy == position:
           numInvaders += 1
+          print numInvaders, "numInvaders"
 
 
     return numInvaders * -500 
@@ -1002,18 +1020,18 @@ class DefensiveCaptureAgent(BaseCaptureAgent):
     # if we're on our side it's good to be close to enemies
     if onMySide:
       if closestEnemyDistance == 0.0:
-        enemyClosenessScore = 100.0
+        enemyClosenessScore = 200.0
 
       else:
-        enemyClosenessScore = 2.0 * (1.0/closestEnemyDistance)
+        enemyClosenessScore = 100.0 * (1.0/closestEnemyDistance)
 
     # otherwise it's not good to be close to enemies
     else:
       if closestEnemyDistance == 0.0:
-        enemyClosenessScore = -100.0
+        enemyClosenessScore = -200.0
 
       else:
-        enemyClosenessScore = -2.0 * (1.0/closestEnemyDistance)
+        enemyClosenessScore = -100.0 * (1.0/closestEnemyDistance)
 
     
     return enemyClosenessScore

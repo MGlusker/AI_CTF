@@ -96,13 +96,12 @@ class ReflexCaptureAgent(CaptureAgent):
     Finds the next successor which is a grid position (location tuple).
     """
     successor = gameState.generateSuccessor(self.index, action)
-    # pos = successor.getAgentState(self.index).getPosition()
-    # if pos != nearestPoint(pos):
-    #   # Only half a grid position was covered
-    #   return successor.generateSuccessor(self.index, action)
-    # else:
-    #   return successor
-    return successor
+    pos = successor.getAgentState(self.index).getPosition()
+    if pos != nearestPoint(pos):
+      # Only half a grid position was covered
+      return successor.generateSuccessor(self.index, action)
+    else:
+      return successor
 
   def evaluate(self, gameState, action):
     """

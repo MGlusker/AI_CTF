@@ -54,7 +54,9 @@ class JointParticleFilter:
   positions.
   """
 
-  def __init__(self, numParticles=600):
+  def __init__(self, numParticles=100):
+      #NOTE: numParticles is the number of particles per set of particles
+      #total particles is 2*numParticles
       self.setNumParticles(numParticles)
 
   def setNumParticles(self, numParticles):
@@ -63,208 +65,219 @@ class JointParticleFilter:
   def initialize(self, ourTeamAgents, opponentAgents, gameState, legalPositions):
       "Stores information about the game, then initiaself.numGhosts = gameState.getNumAgents() - 1"
 
+      #these are lists of indices
       self.ourTeamAgents = ourTeamAgents
       self.opponentAgents = opponentAgents
+
       self.legalPositions = legalPositions
-      self.initializeParticles(gameState)
+      self.particles = util.Counter()
+
+      self.setParticlesToStart(gameState, self.opponentAgents[0])
+      self.setParticlesToStart(gameState, self.opponentAgents[1])
 
 
 
-  def initializeParticles(self, gameState):
-      #This should only be called at the very beginning of the game because thats the only time
+  def setParticlesToStart(self, gameState, opponentAgentIndex):
+      #This should only be called at the very beginning of the game because thats the only time both particles are in jail
      
-      #Initialize new array of particles
-      self.particles = []
-    
-      #Iterate through the agents and find their starting postion
-      startPos = []
-      for opponentAgentIndex in self.opponentAgents:
-        startPos.append(gameState.getInitialAgentPosition(opponentAgentIndex))
+      self.particles[opponentAgentIndex] = []
+
+      #Find the starting postion of this opponent  
+      startPos = gameState.getInitialAgentPosition(opponentAgentIndex)
 
       #this turns the list of startPos into a tuple
       startPos = tuple(startPos)
 
-      #Each particle is of the format: [enemy agent 0 location, enemy agent 1 location]
       #Note which agents these are depend will vary basedd on which team we are
       for i in range(self.numParticles):
-          self.particles.append(startPos)
+          self.particles[opponentAgentIndex].append(startPos)
 
-  def initializeParticlesUniformly(self, gameState):
+
+  def initializeParticlesUniformly(self, gameState, opponentIndex):
     #reset particles to uniform
     import itertools
 
-    self.particles = []
+    self.particles[self.opponentAgents[opponentIndex]] = []
 
     # get all possible permutations of legal ghost positions
-    product = itertools.product(self.legalPositions, repeat=2)
-
-    possiblePositions = list(product)
+    possiblePositions= self.legalPositions
 
     # randomize permutations
     random.shuffle(possiblePositions)
-
-    
-    parts = self.numParticles
     
     length = len(possiblePositions)
 
-    for i in range(parts):
-        self.particles.append(possiblePositions[i%length])
-
-  def observeState(self, gameState, currentAgentIndex):
-      """
-      Reweights and then resamples the set of particles using the likelihood of the noisy
-      observations.
-      """
-      import functools
-      enemyPosList = []
-      unknownParticleIndices = []
-
-      #If we know where opponents are then all particles should agree with that evidence
-      for index, opponentAgentIndex in enumerate(self.opponentAgents):
-
-        #If we can see the position then we know then it returns the correct position
-        #Else, it returns None
-        enemyPosList.append(gameState.getAgentPosition(opponentAgentIndex))
-
-        # #If the pos is None, add to array to signal that we don't know where this agent is 
-        # if pos[index] == None:
-        #   unknownParticleIndices.append(opponentAgentIndex)
+    for i in range(self.numParticles):
+        self.particles[self.opponentAgents[opponentIndex]].append(possiblePositions[i%length])
 
 
-      #This returns an array of noisy Distances from our current agent
-      noisyDistances = gameState.getAgentDistances()      
-      particleWeights = []
+  def hasBeenEaten(self, gameState, opponentAgentIndex, currentAgentIndex, thisAgent):
 
-      #current agent's position
-      #this is what we will be calculating the true distance based on
-      myPos = gameState.getAgentPosition(currentAgentIndex) 
+    previousGameState = thisAgent.getPreviousObservation()
 
-      #weighting the particles
-      for particleIndex, particle in enumerate(self.particles):
+    currentEnemyPos = gameState.getAgentPosition(opponentAgentIndex)
+    currentMyPos = gameState.getAgentPosition(currentAgentIndex)
 
-        listOfLocationWeights = []
+    if previousGameState != None:
+      previousEnemyPos = previousGameState.getAgentPosition(opponentAgentIndex)
+      previousMyPos = previousGameState.getAgentPosition(currentAgentIndex)
+    else:
+      return False #previousGameState only None during first turn
 
-        #opponentIndex is a 0 or 1 
-        for positionIndex, position in enumerate(enemyPosList):
-          if position == None:
+    if currentEnemyPos == None:
+      currentDistance = None
+    else:
+      currentDistance = thisAgent.getMazeDistance(currentMyPos, currentEnemyPos)
 
+    if previousEnemyPos == None:
+      previousDistance = None
+    else:
+      previousDistance = thisAgent.getMazeDistance(previousMyPos, previousEnemyPos)
+
+
+    if previousDistance == 1 and (currentDistance != 1 or currentDistance != 2):
+      
+      self.sendParticlesToJail(gameState, opponentAgentIndex)
+      return True
+    else:
+      print "NOT eaten, don't send to jail"
+      return False
+
+  def sendParticlesToJail(self, gameState, opponentAgentIndex):
+    self.setParticlesToStart(gameState, opponentAgentIndex)
+
+
+  def observeState(self, gameState, currentAgentIndex, thisAgent):
+    """
+    Reweights and then resamples the set of particles using the likelihood of the noisy
+    observations.
+    """
+
+    import functools
+    enemyPosList = []
+    
+    #current agent's position
+    #this is what we will be calculating the true distance based on
+    myPos = gameState.getAgentPosition(currentAgentIndex) 
+
+
+    #If we know where opponents are then all particles should agree with that evidence
+    for opponentAgentIndex in self.opponentAgents:
+      #If we can see the position then we know then it returns the correct position
+      #Else, it returns None
+      enemyPosList.append(gameState.getAgentPosition(opponentAgentIndex))
+
+    #This returns an array of noisy Distances from our current agent
+    noisyDistances = gameState.getAgentDistances()      
+    particleWeights = util.Counter()
+    particleDictionary = util.Counter()
+
+    
+
+
+    for i in range(2):
+
+      particleWeights[self.opponentAgents[i]] = []
+
+      #Has Been Eaten
+      if self.hasBeenEaten(gameState, self.opponentAgents[i], currentAgentIndex, thisAgent):
+
+        particleDictionary[self.opponentAgents[i]] = util.Counter()
+        for index, p in enumerate(self.particles[self.opponentAgents[i]]):
+          particleDictionary[self.opponentAgents[i]][p] += 1
+
+      #Not Eaten
+      else:
+        for particleIndex, particle in enumerate(self.particles[self.opponentAgents[i]]):
+          listOfLocationWeights = []
+
+          if enemyPosList[i] == None:
             # find the true distance from pacman to the current ghost that we're iterating through
-            trueDistance = util.manhattanDistance(particle[positionIndex], myPos)
-
+            trueDistance = util.manhattanDistance(particle, myPos)
             # weight each particle by the probability of getting to that position (use emission model)
             # account for our current belief distribution (evidence) at this point in time
-            listOfLocationWeights.append(gameState.getDistanceProb(trueDistance, noisyDistances[self.opponentAgents[index]]))
+            particleWeights[self.opponentAgents[i]].append(gameState.getDistanceProb(trueDistance, noisyDistances[self.opponentAgents[i]]))
+
           else:
-            self.particles[particleIndex] = self.setParticleToReality(particle, position, index)
-            listOfLocationWeights.append(1)
-
-        #if len(listOfLocationWeights) != 0:
-        particleWeights.append(functools.reduce(lambda x,y: x*y, listOfLocationWeights))
-        # else:
-
-        #     #If there are no unknown agents, that means we exactly where both agents are
-        #     #therefore particle weight is 1 if the particle agrees with both positions
-        #     #or 0 if either of positions are wrong
-        #     if p == pos:
-        #       particleWeights.append(1)
-        #     else:
-        #       particleWeights.append(0)
+            #set particles to reality
+            self.particles[self.opponentAgents[i]][particleIndex] = enemyPosList[i]
+            particleWeights[self.opponentAgents[i]].append(1)
 
 
-      # now create a counter and count up the particle weights observed
-      particleDictionary = util.Counter()
- 
-      for index, p in enumerate(self.particles):
-          #particleDictionary[self.particles[i]] += particleWeights[i]
-          particleDictionary[p] += particleWeights[index]
 
 
-      #particleDictionary.normalize() 
-      
+        # now create a counter and count up the particle weights observed
+        particleDictionary[self.opponentAgents[i]] = util.Counter()
+        for index, p in enumerate(self.particles[self.opponentAgents[i]]):
+          particleDictionary[self.opponentAgents[i]][p] += particleWeights[self.opponentAgents[i]][index]
 
-      if particleDictionary.totalCount() == 0:
-        
-        self.initializeParticlesUniformly(gameState)
-        #I'm not sure it makes sense to reinitialize the particles 
-        #It's necessary however otherwise the program crashes
-        #Does it make sense for our distribution to go to zero somtimes?
-        
+
+
+
+      #reinitialize if 0 for that set of particles
+      if particleDictionary[self.opponentAgents[i]].totalCount() == 0:
+        self.initializeParticlesUniformly(gameState, i)
+
       # otherwise, go ahead and resample based on our new beliefs 
       else:
           
         keys = []
         values = []
 
+
+
         # find each key, value pair in our counter
-        keys, values = zip(*particleDictionary.items())
-
-        self.particles = util.nSample(values, keys, self.numParticles)
-
-  def setParticleToReality(self, particle, position, agentIndex):
-    """
-    Takes a particle (as a tuple of ghost positions) and returns a particle
-    with the ghostIndex'th ghost in jail.
-    """
-    particle = list(particle)
-    particle[agentIndex] = position
-    return tuple(particle)
+        keys, values = zip(*particleDictionary[self.opponentAgents[i]].items())
 
 
+        self.particles[self.opponentAgents[i]] = util.nSample(values, keys, self.numParticles)
+      
+    
   def elapseTime(self, gameState):
     """
     Samples each particle's next state based on its current state and the
     gameState.
     """
-    newParticles = []
+    newParticles = util.Counter()
 
-    for oldParticle in self.particles:
-      newParticle = list(oldParticle) # A list of ghost positions
-      # now loop through and update each entry in newParticle...
-      
-      temp = []
-      for opponentIndex in self.opponentAgents:
+    for i in range(2):
 
-        ourPostDist = self.getOpponentDist(gameState, newParticle, opponentIndex)
+      newParticles[self.opponentAgents[i]] = []
 
-        temp.append(util.sample(ourPostDist))
-          
-      newParticle = temp
-      newParticles.append(tuple(newParticle))
+      for oldParticle in self.particles[self.opponentAgents[i]]:
+
+        newParticle = oldParticle 
+        
+
+        ourPostDist = self.getOpponentDist(gameState, newParticle, self.opponentAgents[i])
+            
+        newParticle = util.sample(ourPostDist)
+        newParticles[self.opponentAgents[i]].append(tuple(newParticle))
     
     self.particles = newParticles
 
 
-  def getBeliefDistribution(self):
-      # convert list of particles into a counter
-      beliefs = util.Counter() 
-
-      # count each unique position 
-      for p in self.particles:
-          beliefs[p] += 1
-      
-      # normalize the count above
-      beliefs.normalize()
-      return beliefs
-
   #This methods isonly slightly different from the above get belief distribution method
   #Returns a slightly different formatted distribution for use in displaying the distribution on the map
-  def modGetBeliefDistribution(self):
+  def getBeliefDistribution(self):
  
     # convert list of particles into a counter
     beliefsOpponentOne = util.Counter() 
     beliefsOpponentTwo = util.Counter() 
 
     # count each unique position 
-    for p in self.particles:
-        beliefsOpponentOne[p[0]] += 1
-        beliefsOpponentTwo[p[1]] += 1
+    for p in self.particles[self.opponentAgents[0]]:
+      beliefsOpponentOne[p] += 1
+
+    for p in self.particles[self.opponentAgents[1]]:
+      beliefsOpponentTwo[p] += 1
     
     # normalize the count above
     beliefsOpponentOne.normalize()
     beliefsOpponentTwo.normalize()
 
     return [beliefsOpponentOne, beliefsOpponentTwo]
+
 
   ##################################
   # HELPER METHODS FOR ELAPSE TIME #
@@ -273,31 +286,31 @@ class JointParticleFilter:
   def getOpponentDist(self, gameState, particle, opponentIndex):
 
     #create a gamestate that corresponds to the particle 
-    opponentPositionGameState = self.setOpponentPositions(gameState, particle)
+    opponentPositionGameState = self.setOpponentPosition(gameState, particle, opponentIndex)
 
     dist = util.Counter()
 
     opponentLegalActions = opponentPositionGameState.getLegalActions(opponentIndex)
     prob = float(1)/float(len(opponentLegalActions))
     
-    if opponentIndex in self.opponentAgents:
-      for action in opponentLegalActions:
-        successor = opponentPositionGameState.generateSuccessor(opponentIndex, action)
-        pos = successor.getAgentState(opponentIndex).getPosition()
-        dist[pos] = prob
-    else:
-      print "This was the opponentIndex:", opponentIndex
-      print "I think something went wrong"
+    
+    for action in opponentLegalActions:
+      successor = opponentPositionGameState.generateSuccessor(opponentIndex, action)
+      pos = successor.getAgentState(opponentIndex).getPosition()
+      dist[pos] = prob
 
     return dist
 
-  def setOpponentPositions(self, gameState, opponentPositions):
+  def setOpponentPosition(self, gameState, opponentPosition, opponentIndex):
     "Sets the position of all opponents to the values in the particle and then returns that gameState"
 
-    for index, pos in enumerate(opponentPositions):
-        conf = game.Configuration(pos, game.Directions.STOP)
-        gameState.data.agentStates[self.opponentAgents[index]] = game.AgentState(conf, True)
-    return gameState
+    returnGameState = gameState
+
+    conf = game.Configuration(opponentPosition, game.Directions.STOP)
+    #tempIsPacman = returnGameState.data.agentStates[self.opponentAgents[index]].isPacman
+    returnGameState.data.agentStates[opponentIndex] = game.AgentState(conf, False)
+
+    return returnGameState
 
 ##########################
 # END PARTICLE FILTERING #
@@ -326,8 +339,8 @@ class BaseCaptureAgent(CaptureAgent):
   def registerInitialState(self, gameState):
 
     legalPositions = self.findLegalPositions(gameState)
-
     CaptureAgent.registerInitialState(self, gameState)
+
     # if we're on blue team this is always [1, 3]
     # if we're on red team this is always [0, 2]
     self.ourTeamAgents = self.getTeam(gameState)
@@ -354,33 +367,35 @@ class BaseCaptureAgent(CaptureAgent):
     
     start = time.time()
   
-    self.jointInference.observeState(gameState, self.index)
+    self.jointInference.observeState(gameState, self.index, self)
 
-    displayDist = self.jointInference.modGetBeliefDistribution()
-    dist = self.jointInference.getBeliefDistribution()
+    displayDist = self.jointInference.getBeliefDistribution()
+    dists = self.jointInference.getBeliefDistribution()
     self.displayDistributionsOverPositions(displayDist)
 
     self.jointInference.elapseTime(gameState)
-    #print "Particle Filtering time:", time.time() - start
+    print "Particle Filtering time:", time.time() - start
 
     ##########################
     # END PARTICLE FILTERING #
     ##########################
 
   
-    print "It's agent #", self.index, "'s turn"
-    action = self.expectimaxGetAction(gameState, dist, self.index)
+    #print "It's agent #", self.index, "'s turn"
+    action = self.expectimaxGetAction(gameState, dists, self.index)
     
-    print "Total time:", time.time() - start
+    #print "Total time:", time.time() - start
     return action
 
-  def expectimaxGetAction(self, gameState, dist, currentAgentIndex):
+  def expectimaxGetAction(self, gameState, dists, currentAgentIndex):
     """
       Returns the expectimax action using self.depth and self.evaluationFunction
     """
 
     #Always our turn at beginning our expectimax
-    mostLikelyState = dist.argMax()
+    mostLikelyState = (dists[0].argMax(), dists[1].argMax())
+    print dists
+    print mostLikelyState
     probableGameState = self.setOpponentPositions(gameState, mostLikelyState)
 
     # list to keep track of agents
@@ -410,7 +425,6 @@ class BaseCaptureAgent(CaptureAgent):
 
 
   def getActionRecursiveHelper(self, gameState, depthCounter, currentAgentIndex):
-
 
     NUM_AGENTS = 4
 
@@ -531,7 +545,7 @@ class BaseCaptureAgent(CaptureAgent):
 
     for index, pos in enumerate(opponentPositions):
         conf = game.Configuration(pos, game.Directions.STOP)
-        gameState.data.agentStates[self.opponentAgents[index]] = game.AgentState(conf, False)
+        gameState.data.agentStates[self.opponentAgents[index]] = game.AgentState(conf, True)
     return gameState
 
   def getMySide(self, gameState):
@@ -632,6 +646,7 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     foodScore = 0.0
 
     # list of food we're trying to eat
+    #NOTE: asList() takes N^2 time (actually x*y coords time) and we're calling this a lot so we gotta see if we can use something else
     foodList = self.getFood(gameState).asList()
 
 
@@ -891,6 +906,7 @@ class DefensiveCaptureAgent(BaseCaptureAgent):
     foodScore = 0.0
 
     # list of food we're defending
+    #NOTE: asList() takes N^2 time (actually x*y coords time) and we're calling this a lot so we gotta see if we can use something else
     foodList = self.getFoodYouAreDefending(gameState).asList()
 
     enemyPositions = self.getPositions(gameState, False)

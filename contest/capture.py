@@ -202,7 +202,7 @@ class GameState:
 
   def isOnRedTeam(self, agentIndex):
     """
-    Returns true if the agent with the given agentIndex is on the red team.
+    Returns true if the agent witxh the given agentIndex is on the red team.
     """
     return self.teams[agentIndex]
 
@@ -569,6 +569,7 @@ class AgentRules:
       # this feature is not turned on
       return
 
+    print agentState.isPacman
     if not agentState.isPacman:
       raise Exception('something is seriously wrong, this agent isnt a pacman!')
 

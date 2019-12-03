@@ -147,7 +147,6 @@ class JointParticleFilter:
 
   def sendParticlesToJail(self, gameState, opponentAgentIndex):
     self.setParticlesToStart(gameState, opponentAgentIndex)
-    print self.particles
 
 
   def observeState(self, gameState, currentAgentIndex, thisAgent):
@@ -381,7 +380,7 @@ class BaseCaptureAgent(CaptureAgent):
     #print "It's agent #", self.index, "'s turn"
     action = self.expectimaxGetAction(gameState, dists, self.index)
     
-    #print "Total time:", time.time() - start
+    print "Total time:", time.time() - start
     return action
 
   def expectimaxGetAction(self, gameState, dists, currentAgentIndex):
@@ -425,7 +424,7 @@ class BaseCaptureAgent(CaptureAgent):
     NUM_AGENTS = 4
 
     #In terms of moves, not plies
-    DEPTH = 4
+    DEPTH = 6
     
     if currentAgentIndex>=4:
       #print "index reset"
@@ -640,33 +639,23 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     """
 
     foodScore = 0.0
+    
+    #[length of food, minFoodDistance]
+    foodStats = self.getFoodStats(gameState, gameState.getAgentPosition(self.index))
 
-    # list of food we're trying to eat
-    foodList = self.getFood(gameState).asList()
-
+    numFood = foodStats[0]
+    closestFoodDistance = foodStats[1]
 
     # a list of all accesible poisitions on our side of the map
     mySideList = self.getMySide(gameState)
-
-    foodDistances = []
-
-    # add the distance from every food pellet to our agent
-    for food in foodList:        
-      foodDistances.append(self.getMazeDistance(gameState.getAgentPosition(self.index), food))
-
-    
     
     # if no food left in the game this is good 
-    if len(foodList) == 0:
+    if numFood == 0:
       foodScore = 1000000
 
     # otherwise there's still food left
     else:
       
-      # find the closest distance to a pellet of food
-      closestFoodDistance = min(foodDistances)
-
-
       # first check to see if our agent is carrying 3 food (or more) 
       # and there's no other food close by, then incentivize going home (to our side)
       if gameState.getAgentState(self.index).numCarrying > 3 and closestFoodDistance > 3:
@@ -681,7 +670,7 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
       else:  
 
         # reward states with less food 
-        foodLeftScore = 100.0 * (1.0/len(foodList))
+        foodLeftScore = 100.0 * (1.0/numFood)
 
         # reward states that have food that is close by:
         # if food is right next to us this is really good
@@ -696,6 +685,25 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
         foodScore = closestFoodScore + foodLeftScore 
 
     return foodScore
+
+  def getFoodStats(self, gameState, myPos):
+    '''
+    return a list of [length of food, minFoodDistance]
+    '''
+    foodHalfGrid = self.getFood(gameState)
+    numFood = 0
+    minimumDistance = float('inf')
+
+    for x in range(foodHalfGrid.width):
+      for y in range(foodHalfGrid.height):
+        if foodHalfGrid[x][y] == True:
+          numFood += 1
+          dist = self.getMazeDistance((x,y),myPos)
+          if  dist < minimumDistance:
+            minimum =dist 
+
+    return [numFood, minimumDistance]
+
 
 
   def getCapsuleScore(self, gameState):

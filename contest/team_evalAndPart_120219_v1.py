@@ -424,7 +424,7 @@ class BaseCaptureAgent(CaptureAgent):
     NUM_AGENTS = 4
 
     #In terms of moves, not plies
-    DEPTH = 6
+    DEPTH = 8
     
     if currentAgentIndex>=4:
       #print "index reset"
@@ -458,17 +458,20 @@ class BaseCaptureAgent(CaptureAgent):
 
       currentEvalScores = util.Counter()
       for child in ourSuccessors:
-        currentEvalScores[child] = (self.evaluationFunction(gameState))
+        currentEvalScores[child] = self.evaluationFunction(gameState)
 
       # only add best 3 states to fully evaluate
-      #topThree = currentEvalScores.sortedKeys()[0:3]
+      top = currentEvalScores.sortedKeys()[0:2]
+
+
 
       # only fully explores top 3 (out of 5) moves
-      # for successor in topThree:
-      #     ourSuccessorsEvalScores.append(self.getActionRecursiveHelper(successor, depthCounter+1, currentAgentIndex +1))
+      for successor in top:
+    
+        ourSuccessorsEvalScores.append(self.getActionRecursiveHelper(successor, depthCounter+1, currentAgentIndex +1))
 
-      for successor in ourSuccessors:
-          ourSuccessorsEvalScores.append(self.getActionRecursiveHelper(successor, depthCounter+1, currentAgentIndex +1))
+      # for successor in ourSuccessors:
+      #     ourSuccessorsEvalScores.append(self.getActionRecursiveHelper(successor, depthCounter+1, currentAgentIndex +1))
 
       return max(ourSuccessorsEvalScores)
 
@@ -488,11 +491,16 @@ class BaseCaptureAgent(CaptureAgent):
       for child in opponentSuccessors:
         currentEvalScores[child] = (self.evaluationFunction(gameState))
 
-      # only add best 3 states to fully evaluate
-      #topThree = currentEvalScores.sortedKeys()[1:5]
+      # only add 4 states to fully evaluate
+      # worst because we assume that our opponent wants the inverse of what we want
+      # end = len(currentEvalScores)
+      # start  = 3 - len(currentEvalScores)
+      # if start <0: start = 0 
 
-      # only fully explores top 3 (out of 5) moves
-      for successor in opponentSuccessors:
+      worst = currentEvalScores.sortedKeys()[-4:-1]
+
+      # only fully explores worst moves
+      for successor in worst:
           opponentSuccessorsEvalScores.append(self.getActionRecursiveHelper(successor, depthCounter+1, currentAgentIndex +1))
     
       # averages = []
@@ -501,7 +509,7 @@ class BaseCaptureAgent(CaptureAgent):
       # for i in range(len(opponentSuccessorsEvalScores)): 
       #   averages[i] = (opponentSuccessorsEvalScores[i]/total)*opponentSuccessorsEvalScores[i]
       
-      return sum(opponentSuccessorsEvalScores)/len(opponentSuccessorsEvalScores)
+      return min(opponentSuccessorsEvalScores)
   
       
 
@@ -688,7 +696,7 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
 
   def getFoodStats(self, gameState, myPos):
     '''
-    return a list of [length of food, minFoodDistance]
+    returns a list of [length of food, minFoodDistance]
     '''
     foodHalfGrid = self.getFood(gameState)
     numFood = 0
@@ -907,39 +915,31 @@ class DefensiveCaptureAgent(BaseCaptureAgent):
     """
 
     foodScore = 0.0
+    myPos = gameState.getAgentPosition(self.index)
 
-    # list of food we're defending
-    foodList = self.getFoodYouAreDefending(gameState).asList()
+    # [length of food, minFoodDistance]
+    foodStats = self.getFoodStats(gameState, myPos)
+    numFood = foodStats[0]
+    closestFoodDistance = foodStats[1]
 
     enemyPositions = self.getPositions(gameState, False)
-
-    closestEnemyDistance = min(enemyPositions)
+    
+    closestEnemyDistance = min(self.getMazeDistance(myPos, position)for position in enemyPositions)
 
     # a list of all accesible poisitions on our side of the map
     mySideList = self.getMySide(gameState)
 
-    foodDistances = []
-
-    # it's bad if enemies are close to our food 
-
-    # add the distance from every food pellet to each enemy
-    for food in foodList:     
-      for enemy in enemyPositions:   
-        foodDistances.append(self.getMazeDistance(enemy, food))
-
 
     # if no food left in the game this is bad 
-    if len(foodList) == 0:
+    if numFood == 0:
       foodScore = -1000000
 
     # otherwise there's still food left
     else:
       
-      # find the closest distance of an enemy to a pellet of food
-      closestFoodDistance = min(foodDistances)
               
       # punish states with less food 
-      foodLeftScore = -100.0 * (1.0/len(foodList))
+      foodLeftScore = -100.0 * (1.0/numFood)
 
       # punish states that have food close to an enemy:
       # if food is right next to enemy this is really bad
@@ -954,6 +954,25 @@ class DefensiveCaptureAgent(BaseCaptureAgent):
       foodScore = closestFoodScore + foodLeftScore 
 
     return foodScore
+
+  def getFoodStats(self, gameState, myPos):
+    '''
+    returns a list of [length of food, minFoodDistance]
+    '''
+    foodHalfGrid = self.getFoodYouAreDefending(gameState)
+    numFood = 0
+    minimumDistance = float('inf')
+
+    for x in range(foodHalfGrid.width):
+      for y in range(foodHalfGrid.height):
+        if foodHalfGrid[x][y] == True:
+          numFood += 1
+          dist = self.getMazeDistance((x,y),myPos)
+          if  dist < minimumDistance:
+            minimum =dist 
+
+    return [numFood, minimumDistance]
+
 
 
   def getCapsuleScore(self, gameState):

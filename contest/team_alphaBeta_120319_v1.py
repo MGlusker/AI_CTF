@@ -379,7 +379,7 @@ class JointParticleFilter:
         pos = successor.getAgentState(opponentIndex).getPosition()
         dist[pos] = prob
       except:
-        print "MARTIN EXCEPTION"
+        print "ELAPSE TIME MARTIN EXCEPTION"
         print "original particle", particle 
         print "action", action
         print "all actions", opponentLegalActions
@@ -615,8 +615,11 @@ class BaseCaptureAgent(CaptureAgent):
 
     ourLegalActions = gameState.getLegalActions(currentAgentIndex)
     for action in ourLegalActions:
-
-      child = gameState.generateSuccessor(currentAgentIndex, action)
+      try: 
+        child = gameState.generateSuccessor(currentAgentIndex, action)
+      except: 
+        print "Max in minimax - Martin Exception"
+        pass
       v = max([v, self.minRecursiveHelper(child, depthCounter+1, currentAgentIndex+1, alpha, beta, DEPTH)])
 
       if(v > beta):
@@ -647,8 +650,11 @@ class BaseCaptureAgent(CaptureAgent):
     opponentLegalActions = gameState.getLegalActions(currentAgentIndex)
 
     for action in opponentLegalActions:
-
-      child = gameState.generateSuccessor(currentAgentIndex, action)
+      try:
+       child = gameState.generateSuccessor(currentAgentIndex, action)
+      except: 
+        print "Max in minimax - Martin Exception"
+        pass
       v = min([v, self.maxRecursiveHelper(child, depthCounter+1, currentAgentIndex+1, alpha, beta, DEPTH)])
       
       if(v < alpha):
@@ -792,14 +798,14 @@ class BaseCaptureAgent(CaptureAgent):
     If findOurs is true then this returns our positions,
     if false then returns enemy positions
     """
-    allPositions = [currentGameState.getAgentPosition(i) for i in range(4)]
+    allPositions = [currentGameState.getAgentPosition(i) for i in xrange(4)]
     
 
     ourPositions = []
     enemyPositions = []
     
     # want to have the correct positions assigned to the correct teams
-    for i in range(4):
+    for i in xrange(4):
       if i in self.ourTeamAgents:
         ourPositions.append(allPositions[i])
       else:
@@ -935,8 +941,8 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     numFood = 0
     minimumDistance = float('inf')
 
-    for x in range(foodHalfGrid.width):
-      for y in range(foodHalfGrid.height):
+    for x in xrange(foodHalfGrid.width):
+      for y in xrange(foodHalfGrid.height):
         if foodHalfGrid[x][y] == True:
           numFood += 1
           dist = self.getMazeDistance((x,y), myPos)

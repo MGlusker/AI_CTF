@@ -569,8 +569,14 @@ class AgentRules:
       # this feature is not turned on
       return
 
-    print agentState.isPacman
+    print "dumpFoodFromDeath agentIndex #:", agentIndex
     if not agentState.isPacman:
+      print
+      print "*Martin Exception message:*"
+      print "agentState.configuration", agentState.configuration
+      print "agentState.isPacman", agentState.isPacman
+      print "agentIndex", agentIndex
+
       raise Exception('something is seriously wrong, this agent isnt a pacman!')
 
     # ok so agentState is this:

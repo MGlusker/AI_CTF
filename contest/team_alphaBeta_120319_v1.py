@@ -54,7 +54,7 @@ class JointParticleFilter:
   positions.
   """
 
-  def __init__(self, numParticles=1000):
+  def __init__(self, numParticles=400):
       #NOTE: numParticles is the number of particles per set of particles
       #total particles is 2*numParticles
       self.setNumParticles(numParticles)
@@ -501,6 +501,7 @@ class BaseCaptureAgent(CaptureAgent):
   #This is the global instance of our particle filtering code that lets us share particles
   #between our two agents
   jointInference = JointParticleFilter()
+  qValues = util.Counter()
   
  
   
@@ -619,7 +620,7 @@ class BaseCaptureAgent(CaptureAgent):
         child = gameState.generateSuccessor(currentAgentIndex, action)
       except: 
         print "Max in minimax - Martin Exception"
-        pass
+        continue
       v = max([v, self.minRecursiveHelper(child, depthCounter+1, currentAgentIndex+1, alpha, beta, DEPTH)])
 
       if(v > beta):
@@ -653,8 +654,8 @@ class BaseCaptureAgent(CaptureAgent):
       try:
        child = gameState.generateSuccessor(currentAgentIndex, action)
       except: 
-        print "Max in minimax - Martin Exception"
-        pass
+        print "Min in minimax - Martin Exception"
+        continue
       v = min([v, self.maxRecursiveHelper(child, depthCounter+1, currentAgentIndex+1, alpha, beta, DEPTH)])
       
       if(v < alpha):
@@ -815,6 +816,129 @@ class BaseCaptureAgent(CaptureAgent):
       return ourPositions
     else:
       return enemyPositions
+
+
+  ######################
+  ##    Q LEARNING    ##
+  ######################
+
+
+  def getQValue(self, state, action):
+        """
+          Returns Q(state,action)
+          Should return 0.0 if we have never seen a state
+          or the Q node value otherwise
+        """
+
+        # just return the qvalue from the counter 
+        return self.qValues[(state, action)]
+
+
+  def computeValueFromQValues(self, state):
+      """
+        Returns max_action Q(state,action)
+        where the max is over legal actions.  Note that if
+        there are no legal actions, which is the case at the
+        terminal state, you should return a value of 0.0.
+      """
+      legalActions = self.getLegalActions(state)
+    
+      # if we're at the terminal state return none
+      if len(legalActions) == 0:
+        return 0.0
+
+      maxQValue = -float("Inf")
+      
+      # otherwise take the action that corresponds with the highest q value
+      for action in legalActions:
+        qValue = self.getQValue(state, action)
+        
+        if qValue > maxQValue:
+          maxQValue = qValue
+
+
+      return maxQValue
+
+
+  def computeActionFromQValues(self, state):
+      """
+        Compute the best action to take in a state.  Note that if there
+        are no legal actions, which is the case at the terminal state,
+        you should return None.
+      """
+         
+      legalActions = self.getLegalActions(state)
+      
+      # if we're at the terminal state return none
+      if len(legalActions) == 0:
+        return None
+
+      maxQValue = -float("Inf")
+      bestAction = None
+      
+      # otherwise take the action that corresponds with the highest q value
+      for action in legalActions:
+        qValue = self.getQValue(state, action)
+        
+        if qValue > maxQValue:
+          maxQValue = qValue
+          bestAction = action
+
+        # break tiebreakers randomly using random.choice()
+        elif qValue == maxQValue:
+          temp = [bestAction, action]
+          
+          # randomly keep the previous action or use the new one
+          bestAction = random.choice(temp)
+
+
+      return bestAction
+
+ 
+  def getAction(self, state):
+      """
+        Compute the action to take in the current state.  With
+        probability self.epsilon, we should take a random action and
+        take the best policy action otherwise.  Note that if there are
+        no legal actions, which is the case at the terminal state, you
+        should choose None as the action.
+
+        HINT: You might want to use util.flipCoin(prob)
+        HINT: To pick randomly from a list, use random.choice(list)
+      """
+      # Pick Action
+      legalActions = self.getLegalActions(state)
+      action = None
+      
+      # choose the best action at a probability of 1 - self.epsilon 
+      # choose a random action at a probabilty of self.epsilon
+
+      # if findRandom action is true this means we find random action (with probability epsilon)
+      # if false it means we return the best action
+      findRandom = util.flipCoin(self.epsilon)
+
+      if findRandom:
+        bestAction = random.choice(legalActions)
+
+      else:
+        bestAction = self.computeActionFromQValues(state)
+         
+      return bestAction
+
+  def update(self, state, action, nextState, reward):
+      """
+        The parent class calls this to observe a
+        state = action => nextState and reward transition.
+        You should do your Q-Value update here
+
+        NOTE: You should never call this function,
+        it will be called on your behalf
+      """
+      
+      # old qvalue + alpha(immediate reward + discount*expected future reward - old q value)
+      newValue = self.qValues[(state, action)] + (self.alpha * (reward + self.discount*self.computeValueFromQValues(nextState) - self.qValues[(state, action)] ) )
+
+      self.qValues[(state, action)] = newValue
 
 
 

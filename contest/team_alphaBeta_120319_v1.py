@@ -54,7 +54,7 @@ class JointParticleFilter:
   positions.
   """
 
-  def __init__(self, numParticles=100):
+  def __init__(self, numParticles=1000):
       #NOTE: numParticles is the number of particles per set of particles
       #total particles is 2*numParticles
       self.setNumParticles(numParticles)
@@ -365,6 +365,7 @@ class JointParticleFilter:
     sidePointDistances = [self.mazeDistanceAgent.getMazeDistance(particle, sidePoint) for sidePoint in self.enemySideList]
     minDistToSide = min(sidePointDistances)
     closestSidePoint = self.enemySideList[sidePointDistances.index(minDistToSide)]
+    resetParticle = False
 
     #ourLegalActions[ourSuccessorsEvalScores.index(max(ourSuccessorsEvalScores))]
 
@@ -373,15 +374,25 @@ class JointParticleFilter:
     
     
     for action in opponentLegalActions:
-      successor = opponentPositionGameState.generateSuccessor(opponentIndex, action)
-      pos = successor.getAgentState(opponentIndex).getPosition() #tuple position of this opponent in the successor
+      try:
+        successor = opponentPositionGameState.generateSuccessor(opponentIndex, action)
+        pos = successor.getAgentState(opponentIndex).getPosition()
+        dist[pos] = prob
+      except:
+        print "MARTIN EXCEPTION"
+        print "original particle", particle 
+        print "action", action
+        print "all actions", opponentLegalActions
+        print "areWeOnOurSide", self.isOpponentOnTheirSide(particle, gameState)
+        dist[particle] = prob
+       
 
       # if self.isOpponentOnTheirSide(opponentIndex, opponentPositionGameState):
       #   distToSide = float(self.mazeDistanceAgent.getMazeDistance(pos, closestSidePoint))
       #   dist[pos] = self.div(1,distToSide*1000)
       # else:
-      dist[pos] = prob
-
+    
+      
     dist.normalize()
     return dist
 

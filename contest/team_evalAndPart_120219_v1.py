@@ -503,11 +503,6 @@ class BaseCaptureAgent(CaptureAgent):
       for successor in worst:
           opponentSuccessorsEvalScores.append(self.getActionRecursiveHelper(successor, depthCounter+1, currentAgentIndex +1))
     
-      # averages = []
-      # total = sum(opponentSuccessorsEvalScores)
-      
-      # for i in range(len(opponentSuccessorsEvalScores)): 
-      #   averages[i] = (opponentSuccessorsEvalScores[i]/total)*opponentSuccessorsEvalScores[i]
       
       return min(opponentSuccessorsEvalScores)
   

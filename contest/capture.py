@@ -569,7 +569,7 @@ class AgentRules:
       # this feature is not turned on
       return
 
-    print "dumpFoodFromDeath agentIndex #:", agentIndex
+    
     if not agentState.isPacman:
       print
       print "*Martin Exception message:*"

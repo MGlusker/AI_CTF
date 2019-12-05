@@ -22,7 +22,7 @@ import game
 #################
 
 def createTeam(firstIndex, secondIndex, isRed,
-               first = 'OffensiveCaptureAgent', second = 'OffensiveCaptureAgent'):
+               first = 'BaseCaptureAgent', second = 'BaseCaptureAgent'):
   """
   This function should return a list of two agents that will form the
   team, initialized using firstIndex and secondIndex as their agent
@@ -508,6 +508,7 @@ class BaseCaptureAgent(CaptureAgent):
   #ef initialize(self, ourTeamAgents, opponentAgents, gameState, legalPositions):
   def registerInitialState(self, gameState):
 
+
     legalPositions = self.findLegalPositions(gameState)
     CaptureAgent.registerInitialState(self, gameState)
 
@@ -524,6 +525,10 @@ class BaseCaptureAgent(CaptureAgent):
     BaseCaptureAgent.jointInference.initialize(self.ourTeamAgents, self.opponentAgents, gameState, legalPositions, self)
 
     self.start = gameState.getAgentPosition(self.index)
+    if self.index == self.ourTeamAgents[0]:
+      self = OffensiveCaptureAgent()
+    else:
+      self = DefensiveCaptureAgent()
    
 
 

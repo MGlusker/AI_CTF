@@ -502,6 +502,8 @@ class BaseCaptureAgent(CaptureAgent):
   
   # initially empty 
   enemyScaredTimes = util.Counter()
+
+  offensiveBooleans = [True, False]
  
   
   #ef initialize(self, ourTeamAgents, opponentAgents, gameState, legalPositions):
@@ -523,9 +525,9 @@ class BaseCaptureAgent(CaptureAgent):
     self.start = gameState.getAgentPosition(self.index)
 
     if self.index == self.ourTeamAgents[0]:
-      self.isOnOffense = True #On Offense
+      self.isOnOffense =  self.offensiveBooleans[0] #On Offense
     elif self.index == self.ourTeamAgents[1]:
-      self.isOnOffense = False #On Defense
+      self.isOnOffense = self.offensiveBooleans[1] #On Defense
    
 
 
@@ -559,6 +561,8 @@ class BaseCaptureAgent(CaptureAgent):
     #Displays my side List
     # sideDist = self.getMySideDist(self.mySideList)
     # self.displayDistributionsOverPositions([sideDist])
+    self.switch(gameState)
+
 
     action = self.getActionAlphaBeta(gameState, dists, self.index)
     
@@ -697,6 +701,36 @@ class BaseCaptureAgent(CaptureAgent):
   # HELPER METHODS #
   ##################
 
+  def switch(self, gameState):
+
+    currentIsOnOffense = self.isOnOffense
+    currentJailTimerOne = self.jointInference.jailTimer[self.opponentAgents[0]]
+    currentJailTimerTwo = self.jointInference.jailTimer[self.opponentAgents[1]]
+
+
+    
+    if self.getScore(gameState) >= 6:#winning by a lot 
+      self.offensiveBooleans = [True, True]
+
+    elif self.getScore(gameState) <= -6: #losing by a lot
+      self.offensiveBooleans = [False, False]
+
+    else: #somewhere in between 
+      self.offensiveBooleans = [True, False]
+
+      if currentJailTimerTwo > 5  or currentJailTimerOne > 5:
+        self.offensiveBooleans = [True, True]
+
+
+    if self.index == self.ourTeamAgents[0]:
+      self.isOnOffense =  self.offensiveBooleans[0] #On Offense
+    elif self.index == self.ourTeamAgents[1]:
+      self.isOnOffense = self.offensiveBooleans[1]
+
+    print "offensiveBooleans", self.offensiveBooleans
+
+
+
   def findLegalPositions(self, gameState):
     #this is necessary for initializing particles uniformly
     mapHeight = gameState.getWalls().height
@@ -728,9 +762,6 @@ class BaseCaptureAgent(CaptureAgent):
         returnGameState.data.agentStates[self.opponentAgents[index]] = game.AgentState(conf, tempIsPacman)
     return returnGameState
 
-  #################################
-  ## helper methods for features ##
-  #################################
 
   def getMySide(self, gameState):
     """

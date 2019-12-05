@@ -122,7 +122,7 @@ class AgentState:
     AgentStates hold the state of an agent (configuration, speed, scared, etc).
     """
 
-    def __init__( self, startConfiguration, isPacman ):
+    def __init__( self, startConfiguration, isPacman):
         self.start = startConfiguration
         self.configuration = startConfiguration
         self.isPacman = isPacman
@@ -145,7 +145,7 @@ class AgentState:
         return hash(hash(self.configuration) + 13 * hash(self.scaredTimer))
 
     def copy( self ):
-        state = AgentState( self.start, self.isPacman )
+        state = AgentState( self.start, self.isPacman)
         state.configuration = self.configuration
         state.scaredTimer = self.scaredTimer
         state.numCarrying = self.numCarrying

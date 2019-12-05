@@ -526,7 +526,7 @@ class BaseCaptureAgent(CaptureAgent):
 
     self.start = gameState.getAgentPosition(self.index)
     if self.index == self.ourTeamAgents[0]:
-      self = OffensiveCaptureAgent()
+      self = self.OffensiveCaptureAgent()
     else:
       self = DefensiveCaptureAgent()
    

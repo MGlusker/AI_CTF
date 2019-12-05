@@ -368,9 +368,9 @@ class JointParticleFilter:
 
     dist = util.Counter()
 
-    sidePointDistances = [self.mazeDistanceAgent.getMazeDistance(particle, sidePoint) for sidePoint in self.enemySideList]
-    minDistToSide = min(sidePointDistances)
-    closestSidePoint = self.enemySideList[sidePointDistances.index(minDistToSide)]
+    # sidePointDistances = [self.mazeDistanceAgent.getMazeDistance(particle, sidePoint) for sidePoint in self.enemySideList]
+    # minDistToSide = min(sidePointDistances)
+    # closestSidePoint = self.enemySideList[sidePointDistances.index(minDistToSide)]
 
     #ourLegalActions[ourSuccessorsEvalScores.index(max(ourSuccessorsEvalScores))]
 
@@ -889,15 +889,14 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     capsuleScore = self.getCapsuleScore(currentGameState)
     enemyClosenessScore = self.getEnemyClosenessScore(currentGameState)
 
-
-    features["foodScore"] = foodScore
+    #features["foodScore"] = foodScore
     features["capsuleScore"] = capsuleScore
     features["enemyClosenessScore"] = enemyClosenessScore
-    features["scoreOfGame"] = self.getScore(currentGameState)
+    #features["scoreOfGame"] = self.getScore(currentGameState)
 
     #print "FS: ", foodScore
-    #print "ECS: ", enemyClosenessScore
-    #print "CS: ", capsuleScore
+    print "ECS: ", enemyClosenessScore
+    print "CS: ", capsuleScore
     #print "ACTUAL SCORE: ", self.getScore(currentGameState)
     """
     print "FOOD: ", 100*foodScore
@@ -914,7 +913,7 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     # capsuleScore is positive
     # enemyClosenessScore is negative
     # socreOfGame is negative if losing, positive if winning
-    Weights = {"foodScore": 1000, "capsuleScore": 100, "enemyClosenessScore": 10, "scoreOfGame": 1} #"capsuleScore": 10, "enemyClosenessScore": 10, "scoreOfGame": 1000}
+    Weights = {"enemyClosenessScore": 1, "capsuleScore": 1}#{"foodScore": 1000, "capsuleScore": 100, "enemyClosenessScore": 10, "scoreOfGame": 1} #"capsuleScore": 10, "enemyClosenessScore": 10, "scoreOfGame": 1000}
 
       
     return Weights
@@ -1030,7 +1029,7 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     if len(distanceToCapsules) == 0:
 
       #print "NO CAPSULES LEFT"
-      capsuleScore = 5000.0
+      capsuleScore = 50.0
 
     # otherwise reward states with fewer capsules 
     else: 
@@ -1040,10 +1039,10 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
 
       # reward being close to capsules
       if minCapsuleDistance == 1:
-        capsuleScore = 500.0
+        capsuleScore = 5.0
       
       else:
-        capsuleScore = 100.0 * (1.0/(minCapsuleDistance)) #+closestGhostDistance))
+        capsuleScore = 1.0 * (1.0/(minCapsuleDistance)) #+closestGhostDistance))
     
 
     return capsuleScore
@@ -1064,7 +1063,8 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     ourScaredTimes = [gameState.getAgentState(us).scaredTimer for us in self.ourTeamAgents]
     
 
-
+    print "enemy Scared Times: ", enemyScaredTimes
+    print "max Scared time: ", maxScaredTime
     
 
     # a boolean telling us if we're on our own side or not
@@ -1084,7 +1084,7 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     closestEnemyDistance = min(distanceToEnemies)
 
     
-    #onMySide = False
+    onMySide = False
     # if we're on our side it's good to be close to enemies (UNLESS WE"RE SCARED)
     if onMySide:
       #print "ONMYSIDE"
@@ -1114,22 +1114,50 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
       #print enemyScaredTimes.argMax()
       #print enemyScaredTimes
       #if enemyScaredTimes.argMax() == 0:
+      print closestEnemyDistance, "closest DIST"
       if maxScaredTime == 0:
         #print "SCARED OF GHOSTS"
         if closestEnemyDistance == 0:
-          enemyClosenessScore = -float('inf')#-1000.0
+          #enemyClosenessScore = -float('inf')#-1000.0
+          enemyClosenessScore = 0 
+        elif closestEnemyDistance == 1:
+          enemyClosenessScore = 1
+        elif closestEnemyDistance == 2:
+          enemyClosenessScore = 2
+        elif closestEnemyDistance == 3:
+          enemyClosenessScore = 3
+        elif closestEnemyDistance == 4:
+          enemyClosenessScore = 4
+        elif closestEnemyDistance == 5:
+          enemyClosenessScore = 5
         else:
-          enemyClosenessScore = -100.0 * (1.0/closestEnemyDistance)
+          enemyClosenessScore = 15
+
+        #else:
+        #  getEnemyClosenessScore = 1.0/closestEnemyDistance
+          #enemyClosenessScore = -100.0 * (1.0/closestEnemyDistance)
 
       # otherwise we ate a pellet so go close to ghost
       else: 
         print "wE aTe a pElLeT"
         #print closestEnemyDistance, "closest dist "
         if closestEnemyDistance == 0:
-          enemyClosenessScore = 2000000000.0
-
+          print "EAT HIM!!!!"
+          enemyClosenessScore = 100.0
+        elif closestEnemyDistance == 1:
+          enemyClosenessScore = 50.0
+        elif closestEnemyDistance == 2:
+          enemyClosenessScore = 25.0
+        elif closestEnemyDistance == 3:
+          enemyClosenessScore = 15.0
+        elif closestEnemyDistance == 4:
+          enemyClosenessScore = 10.0
+        elif closestEnemyDistance == 5:
+          enemyClosenessScore = 5.0
         else:
-          enemyClosenessScore = 1000000000.0 * (1.0/closestEnemyDistance)
+          enemyClosenessScore = 0.0
+        #else:
+        #  enemyClosenessScore = 1000000000.0 * (1.0/closestEnemyDistance)
 
     return enemyClosenessScore
 

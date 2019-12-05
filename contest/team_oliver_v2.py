@@ -22,7 +22,7 @@ import game
 #################
 
 def createTeam(firstIndex, secondIndex, isRed,
-               first = 'OffensiveCaptureAgent', second = 'OffensiveCaptureAgent'):
+               first = 'OffensiveCaptureAgent', second = 'DefensiveCaptureAgent'):
   """
   This function should return a list of two agents that will form the
   team, initialized using firstIndex and secondIndex as their agent
@@ -548,7 +548,7 @@ class BaseCaptureAgent(CaptureAgent):
 
     self.jointInference.elapseTime(gameState)
 
-    #print "Particle Filtering time:", time.time() - start
+    print "Particle Filtering time:", time.time() - start
 
     ##########################
     # END PARTICLE FILTERING #
@@ -560,7 +560,7 @@ class BaseCaptureAgent(CaptureAgent):
 
     action = self.getActionAlphaBeta(gameState, dists, self.index)
     
-    #print "Total time:", time.time() - start
+    print "Total time:", time.time() - start
 
     #print "enemy scared Time: ", self.enemyScaredTimes
 
@@ -610,15 +610,10 @@ class BaseCaptureAgent(CaptureAgent):
 
     
 
-
-
-
-
-
   def getActionAlphaBeta(self, gameState, dists, currentAgentIndex):
     #It's necessarily pacman's turn cause this is at the root 
 
-    DEPTH = 4 #In terms of moves, not plies
+    DEPTH = 4#In terms of moves, not plies
 
     mostLikelyState = (dists[0].argMax(), dists[1].argMax())
     probableGameState = self.setOpponentPositions(gameState, mostLikelyState)
@@ -891,18 +886,19 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     #print currentEnemyScaredTimes
 
     foodScore = self.getFoodScore(currentGameState)
-    #capsuleScore = self.getCapsuleScore(currentGameState)
+    capsuleScore = self.getCapsuleScore(currentGameState)
     enemyClosenessScore = self.getEnemyClosenessScore(currentGameState)
 
 
     features["foodScore"] = foodScore
-    #features["capsuleScore"] = capsuleScore
+    features["capsuleScore"] = capsuleScore
     features["enemyClosenessScore"] = enemyClosenessScore
-    #features["scoreOfGame"] = self.getScore(currentGameState)
+    features["scoreOfGame"] = self.getScore(currentGameState)
 
-    print "FS: ", foodScore
-    print "ECS: ", enemyClosenessScore
-    # print "CS: ", capsuleScore
+    #print "FS: ", foodScore
+    #print "ECS: ", enemyClosenessScore
+    #print "CS: ", capsuleScore
+    #print "ACTUAL SCORE: ", self.getScore(currentGameState)
     """
     print "FOOD: ", 100*foodScore
     print "CAPSULE: ", 10*capsuleScore
@@ -918,7 +914,7 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     # capsuleScore is positive
     # enemyClosenessScore is negative
     # socreOfGame is negative if losing, positive if winning
-    Weights = {"foodScore": 1, "getEnemyClosenessScore": 1}#{"capsuleScore": 1} #{"foodScore": 1, "capsuleScore": 1} #enemyClosenessScore": 1, "capsuleScore": 1} #"capsuleScore": 10, "enemyClosenessScore": 10, "scoreOfGame": 1000}
+    Weights = {"foodScore": 1000, "capsuleScore": 100, "enemyClosenessScore": 10, "scoreOfGame": 1} #"capsuleScore": 10, "enemyClosenessScore": 10, "scoreOfGame": 1000}
 
       
     return Weights
@@ -938,7 +934,7 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     foodScore = 0.0
     
     # a list of all accesible positions on our side of the map
-    mySideList = self.getMySide(gameState)
+    mySideList = self.mySideList
     #[length of food, minFoodDistance]
     foodStats = self.getFoodStats(gameState, gameState.getAgentPosition(self.index))
     numFood = foodStats[0]
@@ -964,7 +960,7 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
 
     # first check to see if our agent is carrying 2 food (or more) 
     # and there's no other food close by, then incentivize going home (to our side)
-    elif gameState.getAgentState(self.index).numCarrying > 2: #and closestFoodDistance > 1:
+    elif gameState.getAgentState(self.index).numCarrying >= 2: #and closestFoodDistance > 1:
       foodScore = 100000000.0 * (1.0/minDistanceHome)
       
    
@@ -1058,8 +1054,17 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     (unless we're on our own side)
     """
     enemyScaredTimes = self.enemyScaredTimes
+    maxScaredTime = -float("inf")
+    maxScaredIndex = 0
+    for key, value in enemyScaredTimes.items():
+      if value > maxScaredTime:
+        maxScaredIndex = key
+        maxScaredTime = value
+
     ourScaredTimes = [gameState.getAgentState(us).scaredTimer for us in self.ourTeamAgents]
     
+
+
     
 
     # a boolean telling us if we're on our own side or not
@@ -1079,6 +1084,7 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     closestEnemyDistance = min(distanceToEnemies)
 
     
+    #onMySide = False
     # if we're on our side it's good to be close to enemies (UNLESS WE"RE SCARED)
     if onMySide:
       #print "ONMYSIDE"
@@ -1105,22 +1111,25 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     else:
       #print "ON OTHER SIDE"
       # if we're normally scared of enemies
-      if enemyScaredTimes.argMax() == 0:
+      #print enemyScaredTimes.argMax()
+      #print enemyScaredTimes
+      #if enemyScaredTimes.argMax() == 0:
+      if maxScaredTime == 0:
         #print "SCARED OF GHOSTS"
         if closestEnemyDistance == 0:
-          enemyClosenessScore = -1000.0
-
+          enemyClosenessScore = -float('inf')#-1000.0
         else:
           enemyClosenessScore = -100.0 * (1.0/closestEnemyDistance)
 
       # otherwise we ate a pellet so go close to ghost
       else: 
         print "wE aTe a pElLeT"
+        #print closestEnemyDistance, "closest dist "
         if closestEnemyDistance == 0:
-          enemyClosenessScore = 1000.0
+          enemyClosenessScore = 2000000000.0
 
         else:
-          enemyClosenessScore = 100.0 * (1.0/closestEnemyDistance)
+          enemyClosenessScore = 1000000000.0 * (1.0/closestEnemyDistance)
 
     return enemyClosenessScore
 
@@ -1182,11 +1191,14 @@ class DefensiveCaptureAgent(BaseCaptureAgent):
 
 
     features["foodScore"] = foodScore
-    features["capsuleScore"] = capsuleScore
+    #features["capsuleScore"] = capsuleScore
     features["numInvadersScore"] = numInvadersScore
     features["enemyClosenessScore"] = enemyClosenessScore
-    features["scoreOfGame"] = self.getScore(currentGameState)
+    #features["scoreOfGame"] = self.getScore(currentGameState)
 
+    print "enemyscore: ", enemyClosenessScore
+    print "foodScore: ", foodScore
+    print "numInvaders", numInvadersScore
     """
     print "FOOD: ", foodScore
     print "CAPSULE: ", capsuleScore
@@ -1203,7 +1215,7 @@ class DefensiveCaptureAgent(BaseCaptureAgent):
     # numInvadersScore is negative if we have invaders, positive if we don't
     # enemyClosenessScore is negative
     # socreOfGame is negative if losing, positive if winning
-    Weights = {"foodScore": 1000, "capsuleScore": 10, "numInvadersScore": 100, "enemyClosenessScore": 100000, "scoreOfGame": 1}
+    Weights = {"foodScore": 1, "enemyClosenessScore": 1000, "numInvadersScore": 1}#{"foodScore": 1000}#, "capsuleScore": 10, "numInvadersScore": 100, "enemyClosenessScore": 100000, "scoreOfGame": 1}
 
       
     return Weights
@@ -1222,12 +1234,16 @@ class DefensiveCaptureAgent(BaseCaptureAgent):
     foodScore = 0.0
     # myPos = gameState.getAgentPosition(self.index)
 
-    # [length of food, minFoodDistance]
+    
+
     enemyPositions = self.getPositions(gameState, False)
     
+    # [length of food, minFoodDistance]
     foodStats = self.getFoodStats(gameState, enemyPositions)
     
+    # number of food pelets we're defending in this gamestate
     numFood = foodStats[0]
+    #print "numFood", numFood
     # this stores the closest distance between an enemy and a piece of food we're defending
     closestFoodDistance = foodStats[1]
     
@@ -1237,20 +1253,20 @@ class DefensiveCaptureAgent(BaseCaptureAgent):
     mySideList = self.getMySide(gameState)
 
 
-    # if no food left in the game this is bad 
+    # if no food left in the game then we lose 
     if numFood == 0:
-      foodScore = -1000000
+      foodScore = -float('inf')
 
     # otherwise there's still food left
     else:
       
               
       # punish states with less food 
-      foodLeftScore = -100.0 * (1.0/numFood)
+      foodLeftScore = -10000.0 * (1.0/numFood)
 
       # punish states that have food close to an enemy:
       # if food is right next to enemy this is really bad
-      if closestFoodDistance == 1:
+      if closestFoodDistance == 0:
         closestFoodScore = -200.0
 
       # otherwise make it so the closer the food, the lower the score
@@ -1337,12 +1353,39 @@ class DefensiveCaptureAgent(BaseCaptureAgent):
     # count how many invaders are on our side
     numInvaders = 0
 
-    # a list of all accesible poisitions on our side of the map
-    mySideList = self.getMySide(gameState)
+    mapWidth = gameState.getWalls().width
+    mapHeight = gameState.getWalls().height
+    allPosList = []
+
+    #red is always on the left; blue always on right 
+    # if we're on the RED team 
+    #print gameState.isOnRedTeam(self.index)
+    if gameState.isOnRedTeam(self.index):
+      width = (mapWidth/2)-1
+      #mySideX = x
+      for y in range(mapHeight):
+        for x in range(width):
+          if not gameState.hasWall(x,y):
+            allPosList.append((x,y))
+
+    # if we're on the BLUE team
+    #print not gameState.isOnRedTeam(self.index)
+    if not gameState.isOnRedTeam(self.index):
+      width = (mapWidth/2)
+      #mySideX = x
+      #print "BLUE"
+      for y in range(mapHeight):
+        for x in range(width):
+          if not gameState.hasWall(x,y):
+            allPosList.append((x,y))
+
+    
+    #print allPosList
 
     for enemy in enemyPositions:
-      for position in mySideList:
+      for position in allPosList:
         if enemy == position:
+          print "ENEMYTYYYYYY"
           numInvaders += 1
 
 
@@ -1358,26 +1401,93 @@ class DefensiveCaptureAgent(BaseCaptureAgent):
     (unless we're on their side)
     """
 
+    #enemyScaredTimes = self.enemyScaredTimes
+    ourScaredTimes = [gameState.getAgentState(us).scaredTimer for us in self.ourTeamAgents]
     # a boolean telling us if we're on our own side or not
     onMySide = self.areWeOnOurSide(gameState)
 
-    # a list of the enemy positions (as determined by particleFiltering)
-    enemyPositions = self.getPositions(gameState, False)
+    myRealPosition = self.getCurrentObservation().getAgentPosition(self.index)
+    realEnemyPositions = self.getPositions(self.getCurrentObservation(), False)
+    realDistanceToEnemies = []
     
+    for enemy in realEnemyPositions:
+      realDistanceToEnemies.append(self.getMazeDistance(myRealPosition, enemy))
+
+    closestRealEnemyDistance = min(realDistanceToEnemies)
+    closestRealEnemyPosition = realEnemyPositions[realDistanceToEnemies.index(closestRealEnemyDistance)]
+    closestRealEnemyIndex = self.opponentAgents[realDistanceToEnemies.index(closestRealEnemyDistance)]
+    #print closestRealEnemyDistance, "closestrealenemyDist"
+    #print closestRealEnemyPosition, " Position"
+    #print closestRealEnemyIndex, "index "
+    
+
+    myPos = gameState.getAgentPosition(self.index)
+    enemyPositions = self.getPositions(gameState, False)  
     distanceToEnemies = []
-
-    enemyClosenessScore = 0.0
-
     # find distance to each invader
     for enemy in enemyPositions:
-      distanceToEnemies.append(self.getMazeDistance(gameState.getAgentPosition(self.index), enemy))
+      distanceToEnemies.append(self.getMazeDistance(myPos, enemy))
 
     closestEnemyDistance = min(distanceToEnemies)
+    closestEnemyPosition = enemyPositions[distanceToEnemies.index(closestEnemyDistance)]
 
     
+    enemyClosenessScore = 0.0
+
+
+
+    
+
+    # if we're on our side it's good to be close to enemies (UNLESS WE"RE SCARED)
+    if onMySide:
+      #print "ONMYSIDE"
+      # if we're not scared of any enemies try to get close
+      if max(ourScaredTimes) == 0:
+        #print "EAT GHOST"
+        # if we eat the enemy
+        if closestRealEnemyDistance == 1 and gameState.getAgentPosition(closestRealEnemyIndex) == None:
+          print "ghost eaten"
+          enemyClosenessScore = 1000000000.0
+
+        elif closestEnemyDistance == 0:
+          enemyClosenessScore = 1000.0
+        else:
+          enemyClosenessScore = 100.0 * (1.0/closestEnemyDistance)
+
+
+      
+      # otherwise we're scared so run away
+      else: 
+        print "wErE sCaReD"
+        if closestEnemyDistance == 0:
+          enemyClosenessScore = -1000.0
+
+        else:
+          enemyClosenessScore = -100.0 * (1.0/closestEnemyDistance)
+
+
+    # otherwise we're on the other side so go home
+    """
+    else:
+      
+      minDistanceHome = min([self.getMazeDistance(myPos, position) for position in self.mySideList])
+      
+      if myPos in self.mySideList:
+        #print "We're home!"
+        enemyClosenessScore = 2000000000.0
+
+    
+      else:
+        enemyClosenessScore = 100000000.0 * (1.0/minDistanceHome)
+        """
+    """
     # if we're on our side it's good to be close to enemies
     if onMySide:
-      if closestEnemyDistance == 0:
+      # if were on the edge of our side and enemy right next to us BAD
+      if myRealPos in self.mySideList and closestEnemyDistance == 1 and myPos == myRealPos:
+        enemyClosenessScore = -1000.0
+
+      elif closestEnemyDistance == 0:
         enemyClosenessScore = 1000.0
 
       else:
@@ -1393,7 +1503,7 @@ class DefensiveCaptureAgent(BaseCaptureAgent):
 
     #print "closestEnemyDistance: ", closestEnemyDistance
     #print "enemyClosenessScore: ", enemyClosenessScore
-
+    """
     return enemyClosenessScore
 
           

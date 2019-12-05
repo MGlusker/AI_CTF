@@ -562,7 +562,7 @@ class BaseCaptureAgent(CaptureAgent):
     
     #print "Total time:", time.time() - start
 
-    print "enemy scared Time: ", self.enemyScaredTimes
+    #print "enemy scared Time: ", self.enemyScaredTimes
 
     self.updateScaredTimes(action, gameState, hasBeenEatenList)
 
@@ -574,7 +574,7 @@ class BaseCaptureAgent(CaptureAgent):
 
 
   def updateScaredTimes(self, action, gameState, hasBeenEatenList):
-    print "self.index", self.index
+    #print "self.index", self.index
     currentState = gameState
     successor = gameState.generateSuccessor(self.index, action)
 
@@ -586,29 +586,29 @@ class BaseCaptureAgent(CaptureAgent):
       prevOpponent = 3
   
     if actionNumCapsules < currentNumCapsules:
-      print "something"
+      
       self.enemyScaredTimes[self.opponentAgents[0]] = 40
       self.enemyScaredTimes[self.opponentAgents[1]] = 40
       return
     
     #decrement the correct opponent
     elif self.enemyScaredTimes[prevOpponent] > 0: 
-      print "first"
+      
       self.enemyScaredTimes[prevOpponent] -= 1
     elif self.enemyScaredTimes[prevOpponent] > 0: 
-      print "second"
+      
       self.enemyScaredTimes[prevOpponent] -= 1
 
 
     # if agent gets eaten set the scared timer of it to 0
     if hasBeenEatenList[0] == True and self.enemyScaredTimes[self.opponentAgents[0]] > 0:
-      print "third"
+      
       self.enemyScaredTimes[self.opponentAgents[0]] = 0 
     if hasBeenEatenList[1] == True and self.enemyScaredTimes[self.opponentAgents[1]] > 0:
-      print "second"
+      
       self.enemyScaredTimes[self.opponentAgents[1]] = 0 
 
-    print "In update enemy scared Times: ", self.enemyScaredTimes
+    
 
 
 
@@ -891,17 +891,17 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     #print currentEnemyScaredTimes
 
     foodScore = self.getFoodScore(currentGameState)
-    capsuleScore = self.getCapsuleScore(currentGameState)
+    #capsuleScore = self.getCapsuleScore(currentGameState)
     enemyClosenessScore = self.getEnemyClosenessScore(currentGameState)
 
 
     features["foodScore"] = foodScore
-    features["capsuleScore"] = capsuleScore
+    #features["capsuleScore"] = capsuleScore
     features["enemyClosenessScore"] = enemyClosenessScore
     #features["scoreOfGame"] = self.getScore(currentGameState)
 
-    # print "FS: ", foodScore
-    # print "ECS: ", enemyClosenessScore
+    print "FS: ", foodScore
+    print "ECS: ", enemyClosenessScore
     # print "CS: ", capsuleScore
     """
     print "FOOD: ", 100*foodScore
@@ -918,7 +918,7 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     # capsuleScore is positive
     # enemyClosenessScore is negative
     # socreOfGame is negative if losing, positive if winning
-    Weights = {"capsuleScore": 1} #{"foodScore": 1, "capsuleScore": 1} #enemyClosenessScore": 1, "capsuleScore": 1} #"capsuleScore": 10, "enemyClosenessScore": 10, "scoreOfGame": 1000}
+    Weights = {"foodScore": 1, "getEnemyClosenessScore": 1}#{"capsuleScore": 1} #{"foodScore": 1, "capsuleScore": 1} #enemyClosenessScore": 1, "capsuleScore": 1} #"capsuleScore": 10, "enemyClosenessScore": 10, "scoreOfGame": 1000}
 
       
     return Weights
@@ -959,7 +959,7 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
 
     # if we're home than this is really good 
     if myPos in mySideList and thisMinimaxStateScore > realScore:
-      print "We're home!"
+      #print "We're home!"
       foodScore = 2000000000.0
 
     # first check to see if our agent is carrying 2 food (or more) 
@@ -1084,6 +1084,7 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
       #print "ONMYSIDE"
       # if we're not scared of any enemies try to get close
       if max(ourScaredTimes) == 0:
+        #print "EAT GHOST"
         if closestEnemyDistance == 0:
           enemyClosenessScore = 1000.0
 
@@ -1102,9 +1103,10 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
 
     # otherwise we're on the other side so it's not good to be close to enemies (UNLESS WE"RE HUNGRY)
     else:
-      print "ON OTHER SIDE"
+      #print "ON OTHER SIDE"
       # if we're normally scared of enemies
       if enemyScaredTimes.argMax() == 0:
+        #print "SCARED OF GHOSTS"
         if closestEnemyDistance == 0:
           enemyClosenessScore = -1000.0
 
@@ -1113,7 +1115,7 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
 
       # otherwise we ate a pellet so go close to ghost
       else: 
-        print "WE ATE A PELLET"
+        print "wE aTe a pElLeT"
         if closestEnemyDistance == 0:
           enemyClosenessScore = 1000.0
 

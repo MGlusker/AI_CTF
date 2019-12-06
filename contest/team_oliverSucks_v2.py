@@ -232,7 +232,7 @@ class JointParticleFilter:
     self.setParticlesToStart(gameState, opponentAgentIndex)
 
   def setParticlesToReality(self, gameState, opponentAgentIndex, enemyPos):
-    for particleIndex in self.numParticles:
+    for particleIndex in range(self.numParticles):
       self.particles[opponentAgentIndex][particleIndex] = enemyPos
       
 
@@ -275,7 +275,7 @@ class JointParticleFilter:
 
       if enemyPosList[i] != None:
         self.setParticlesToReality(gameState, opponentAgentIndex, enemyPosList[i])
-        particleWeights[self.opponentAgents[i]][enemyPosList[i]].append(1)
+        particleDictionary[self.opponentAgents[i]][enemyPosList[i]] = 1
 
       #Has Been Eaten
       elif hasBeenEaten:

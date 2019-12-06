@@ -136,12 +136,12 @@ class JointParticleFilter:
   def setParticlesToJailTimer(self, gameState, opponentAgentIndex, currentAgentIndex):
     self.particles[opponentAgentIndex] = []
 
-    whereOnJailPath = self.jailPaths[opponentAgentIndex][-self.jailTimer[opponentAgentIndex]]
+    whereOnJailPath = self.jailPaths[opponentAgentIndex][-(self.jailTimer[opponentAgentIndex]-1)]
 
     for i in range(self.numParticles):
       self.particles[opponentAgentIndex].append(whereOnJailPath)
 
-    if (currentAgentIndex == opponentAgentIndex+1) or opponentAgentIndex == 3:
+    if (currentAgentIndex == opponentAgentIndex+1) or (opponentAgentIndex == 3 and currentAgentIndex == 0):
       self.jailTimer[opponentAgentIndex] -= 1
 
     return whereOnJailPath
@@ -260,12 +260,12 @@ class JointParticleFilter:
       hasBeenEaten = self.hasBeenEaten(gameState, self.opponentAgents[i], currentAgentIndex, thisAgent)
       hasBeenEatenList.append(hasBeenEaten)
 
-      if self.jailTimer[self.opponentAgents[i]] != 0:
+      if self.jailTimer[self.opponentAgents[i]] != 0 and enemyPosList[i] == None:
         whereOnJailPath = self.setParticlesToJailTimer(gameState, self.opponentAgents[i], currentAgentIndex) #returns where on jail path
         particleDictionary[self.opponentAgents[i]][whereOnJailPath] = 1
 
       #Has Been Eaten
-      elif hasBeenEaten:
+      if hasBeenEaten:
         jailPos = gameState.getInitialAgentPosition(self.opponentAgents[i])
         particleDictionary[self.opponentAgents[i]][jailPos] = 1
         
@@ -313,27 +313,32 @@ class JointParticleFilter:
       
     return hasBeenEatenList
 
-  def elapseTime(self, gameState):
+  def elapseTime(self, gameState, currentAgentIndex):
     """
     Samples each particle's next state based on its current state and the
     gameState.
     """
-    newParticles = util.Counter()
+    #print self.particles
+    opponentAgentIndex = currentAgentIndex - 1
 
-    for i in range(2):
+    if opponentAgentIndex == -1:
+      opponentAgentIndex = 3
 
-      newParticles[self.opponentAgents[i]] = []
+    currentParticleList = self.particles[opponentAgentIndex]
 
-      for oldParticle in self.particles[self.opponentAgents[i]]:
+    self.particles[opponentAgentIndex] = []
 
-        newParticle = oldParticle 
-        
-        ourPostDist = self.getOpponentDist(gameState, newParticle, self.opponentAgents[i])
-            
-        newParticle = util.sample(ourPostDist)
-        newParticles[self.opponentAgents[i]].append(tuple(newParticle))
-    
-    self.particles = newParticles
+    for oldParticle in currentParticleList:
+
+      newParticle = oldParticle 
+      
+      ourPostDist = self.getOpponentDist(gameState, newParticle, opponentAgentIndex)
+          
+      newParticle = util.sample(ourPostDist)
+      self.particles[opponentAgentIndex].append(tuple(newParticle))
+
+    #print self.particles
+
 
 
   #This methods isonly slightly different from the above get belief distribution method
@@ -368,9 +373,9 @@ class JointParticleFilter:
 
     dist = util.Counter()
 
-    sidePointDistances = [self.mazeDistanceAgent.getMazeDistance(particle, sidePoint) for sidePoint in self.enemySideList]
-    minDistToSide = min(sidePointDistances)
-    closestSidePoint = self.enemySideList[sidePointDistances.index(minDistToSide)]
+    # sidePointDistances = [self.mazeDistanceAgent.getMazeDistance(particle, sidePoint) for sidePoint in self.enemySideList]
+    # minDistToSide = min(sidePointDistances)
+    # closestSidePoint = self.enemySideList[sidePointDistances.index(minDistToSide)]
 
     #ourLegalActions[ourSuccessorsEvalScores.index(max(ourSuccessorsEvalScores))]
 
@@ -391,7 +396,7 @@ class JointParticleFilter:
         print "areWeOnOurSide", self.isOpponentOnTheirSide(particle, gameState)
         dist[particle] = prob
 
-    dist.normalize()
+    #dist.normalize()
     return dist
 
   def div(self, x,y):
@@ -495,6 +500,8 @@ class BaseCaptureAgent(CaptureAgent):
   A base class for our agents that chooses score-maximizing actions
   """
 
+
+
   #Particle Filtering Stuff
   #This is the global instance of our particle filtering code that lets us share particles
   #between our two agents
@@ -530,8 +537,8 @@ class BaseCaptureAgent(CaptureAgent):
       self.isOnOffense =  self.offensiveBooleans[0] #On Offense
     elif self.index == self.ourTeamAgents[1]:
       self.isOnOffense = self.offensiveBooleans[1] #On Defense
-   
 
+    
 
   def chooseAction(self, gameState):
     """
@@ -539,23 +546,26 @@ class BaseCaptureAgent(CaptureAgent):
     """
     ######################
     # PARTICLE FILTERING #
-    ######################
-    
+    ######################  
    
-    start = time.time()
+    self.start = time.time()
   
     hasBeenEatenList = self.jointInference.observeState(gameState, self.index, self)
+    
+    #print "Observe Filtering time:", time.time() - self.start
 
     displayDist = self.jointInference.getBeliefDistribution()
     dists = self.jointInference.getBeliefDistribution()
 
-
+    
     self.displayDistributionsOverPositions(displayDist)
+   
 
-    self.jointInference.elapseTime(gameState)
+    elapseStart = time.time()
 
-    print "Particle Filtering time:", time.time() - start
+    self.jointInference.elapseTime(gameState, self.index)
 
+    #print "Elapse Filtering time:", time.time() - elapseStart
     ##########################
     # END PARTICLE FILTERING #
     ##########################
@@ -563,15 +573,20 @@ class BaseCaptureAgent(CaptureAgent):
     #Displays my side List
     # sideDist = self.getMySideDist(self.mySideList)
     # self.displayDistributionsOverPositions([sideDist])
-    #self.switch(gameState)
 
+    self.switch(gameState)
+    
     action = self.getActionAlphaBeta(gameState, dists, self.index)
     
-    print "Total time:", time.time() - start
+
+    
 
     #print "enemy scared Time: ", self.enemyScaredTimes
 
     self.updateScaredTimes(action, gameState, hasBeenEatenList)
+
+    #print "Total time:", time.time() - self.start
+
 
     return action
 
@@ -579,8 +594,10 @@ class BaseCaptureAgent(CaptureAgent):
 
   def getActionAlphaBeta(self, gameState, dists, currentAgentIndex):
     #It's necessarily pacman's turn cause this is at the root 
-
-    DEPTH = 4#In terms of moves, not plies
+    self.DEPTH = 4
+    self.timesUp = False
+    self.timesUpfeatureOn = False
+    
 
     mostLikelyState = (dists[0].argMax(), dists[1].argMax())
     probableGameState = self.setOpponentPositions(gameState, mostLikelyState)
@@ -597,7 +614,7 @@ class BaseCaptureAgent(CaptureAgent):
       ourSuccessors.append(gameState.generateSuccessor(currentAgentIndex, action))
     
     for child in ourSuccessors:
-      v = max([v, self.minRecursiveHelper(child, 1, currentAgentIndex+1, alpha, beta, DEPTH)])
+      v = max([v, self.minRecursiveHelper(child, 1, currentAgentIndex+1, alpha, beta, self.DEPTH)])
       ourSuccessorsEvalScores.append(v)
 
       if(v > beta):
@@ -635,10 +652,15 @@ class BaseCaptureAgent(CaptureAgent):
         continue
       v = max([v, self.minRecursiveHelper(child, depthCounter+1, currentAgentIndex+1, alpha, beta, DEPTH)])
 
-      if(v > beta):
+      if(v > beta) or self.timesUp:
         return v
 
       alpha = max([alpha, v])
+
+    #print float(time.time() - self.start) > float(0.95)
+    if float(time.time() - self.start) > float(0.95) and self.timesUpfeatureOn:
+      
+      self.timesUp = True
 
     return v
 
@@ -671,10 +693,13 @@ class BaseCaptureAgent(CaptureAgent):
         continue
       v = min([v, self.maxRecursiveHelper(child, depthCounter+1, currentAgentIndex+1, alpha, beta, DEPTH)])
       
-      if(v < alpha):
+      if(v < alpha) or self.timesUp:
         return v
     
       beta = min([beta, v])
+
+    if float(time.time() - self.start) > float(0.95) and self.timesUpfeatureOn:
+      self.timesUp = True
     
     return v
      
@@ -763,7 +788,7 @@ class BaseCaptureAgent(CaptureAgent):
     elif self.index == self.ourTeamAgents[1]:
       self.isOnOffense = self.offensiveBooleans[1]
     
-    print "offensiveBooleans", self.offensiveBooleans
+    #print "offensiveBooleans", self.offensiveBooleans
  
 
 
@@ -822,13 +847,43 @@ class BaseCaptureAgent(CaptureAgent):
     for index, pos in enumerate(opponentPositions):
         conf = game.Configuration(pos, game.Directions.STOP)
 
-        if self.areWeOnOurSide(gameState, self.opponentAgents[index]):
+        #print "setOpponentPositions opponentIndex", self.opponentAgents[index]
+        if self.isOpponentOnTheirSide(pos, gameState):
           tempIsPacman = False
         else:
           tempIsPacman = True
 
         returnGameState.data.agentStates[self.opponentAgents[index]] = game.AgentState(conf, tempIsPacman)
     return returnGameState
+
+  def isOpponentOnTheirSide(self, myPos, gameState):
+    """
+    this returns true if this agent is on their side
+    and false if this agent is on their enemy's side
+    """ 
+
+    #myPos = gameState.getAgentPosition(selfIndex)
+    mapWidth = gameState.getWalls().width
+    mapHeight = gameState.getWalls().height
+    isOnRedTeam = gameState.isOnRedTeam(self.opponentAgents[0])
+
+    # if we're on the red team
+    if isOnRedTeam:
+      x = (mapWidth/2)-1
+      mySideX = x
+   
+    # if we're on the blue team 
+    if not isOnRedTeam:
+      x = (mapWidth/2)
+      mySideX = x
+
+    onMySide = True 
+    if myPos[0] >= mySideX and isOnRedTeam:
+      onMySide = False
+    if myPos[0] <= mySideX and not isOnRedTeam:
+      onMySide = False
+
+    return onMySide  
 
   #################################
   ## helper methods for features ##

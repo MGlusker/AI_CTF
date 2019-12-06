@@ -727,7 +727,7 @@ class BaseCaptureAgent(CaptureAgent):
     elif self.index == self.ourTeamAgents[1]:
       self.isOnOffense = self.offensiveBooleans[1]
 
-    print "offensiveBooleans", self.offensiveBooleans
+    #print "offensiveBooleans", self.offensiveBooleans
 
 
 
@@ -935,11 +935,11 @@ class BaseCaptureAgent(CaptureAgent):
     features["offensiveEnemyClosenessScore"] = offensiveEnemyClosenessScore
     #features["scoreOfGame"] = self.getScore(currentGameState)
 
-    # print "FS: ", foodScore
+    # print "FS: ", offensiveFoodScore
     # print "ECS: ", enemyClosenessScore
     # print "CS: ", capsuleScore
     """
-    print "FOOD: ", 100*foodScore
+    print "FOOD: ", 100*offensiveFoodScore
     print "CAPSULE: ", 10*capsuleScore
     print "ENEMY: ", 1*enemyClosenessScore
     print "ACTUAL SCORE: ", 1*self.getScore(currentGameState)

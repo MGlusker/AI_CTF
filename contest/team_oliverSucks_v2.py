@@ -136,7 +136,11 @@ class JointParticleFilter:
   def setParticlesToJailTimer(self, gameState, opponentAgentIndex, currentAgentIndex):
     self.particles[opponentAgentIndex] = []
 
-    whereOnJailPath = self.jailPaths[opponentAgentIndex][-(self.jailTimer[opponentAgentIndex]-1)]
+    indexOnJailPath =  len(self.jailPaths[opponentAgentIndex]) - self.jailTimer[opponentAgentIndex]
+    # if indexOnJailPath == -1:
+    #   indexOnJailPath == 
+
+    whereOnJailPath = self.jailPaths[opponentAgentIndex][indexOnJailPath]
 
     for i in range(self.numParticles):
       self.particles[opponentAgentIndex].append(whereOnJailPath)
@@ -144,12 +148,15 @@ class JointParticleFilter:
     if (currentAgentIndex == opponentAgentIndex+1) or (opponentAgentIndex == 3 and currentAgentIndex == 0):
       self.jailTimer[opponentAgentIndex] -= 1
 
+
     return whereOnJailPath
 
 
   def setParticlesToStart(self, gameState, opponentAgentIndex):
       #This should only be called at the very beginning of the game because thats the only time both particles are in jail
       print "set to Start"
+      print "**************"
+      print opponentAgentIndex
       self.particles[opponentAgentIndex] = []
 
       #Find the starting postion of this opponent  
@@ -164,7 +171,7 @@ class JointParticleFilter:
           self.particles[opponentAgentIndex].append(startPos)
 
 
-      self.jailTimer[opponentAgentIndex] = len(self.jailPaths[opponentAgentIndex])
+      self.jailTimer[opponentAgentIndex] = len(self.jailPaths[opponentAgentIndex])-1
 
 
   def initializeParticlesUniformly(self, gameState, opponentIndex):
@@ -224,14 +231,17 @@ class JointParticleFilter:
   def sendParticlesToJail(self, gameState, opponentAgentIndex):
     self.setParticlesToStart(gameState, opponentAgentIndex)
 
+  def setParticlesToReality(self, gameState, opponentAgentIndex, enemyPos):
+    for particleIndex in self.numParticles:
+      self.particles[opponentAgentIndex][particleIndex] = enemyPos
+      
+
 
   def observeState(self, gameState, currentAgentIndex, thisAgent):
     """
     Reweights and then resamples the set of particles using the likelihood of the noisy
     observations.
     """
-
-
 
     #current agent's position
     #this is what we will be calculating the true distance based on
@@ -246,64 +256,69 @@ class JointParticleFilter:
       #Else, it returns None
       enemyPosList.append(gameState.getAgentPosition(opponentAgentIndex))
 
-
     #This returns an array of noisy Distances from our current agent
     noisyDistances = gameState.getAgentDistances()      
     particleWeights = util.Counter()
     particleDictionary = util.Counter()
+    print
+    print "observe"
 
     for i in range(2):
-
-      
       particleWeights[self.opponentAgents[i]] = []
       particleDictionary[self.opponentAgents[i]] = util.Counter()
       hasBeenEaten = self.hasBeenEaten(gameState, self.opponentAgents[i], currentAgentIndex, thisAgent)
       hasBeenEatenList.append(hasBeenEaten)
 
-      if self.jailTimer[self.opponentAgents[i]] != 0 and enemyPosList[i] == None:
-        whereOnJailPath = self.setParticlesToJailTimer(gameState, self.opponentAgents[i], currentAgentIndex) #returns where on jail path
-        particleDictionary[self.opponentAgents[i]][whereOnJailPath] = 1
+      print "jailTimer", self.jailTimer[self.opponentAgents[i]]
+      print "opponentAgentIndex", self.opponentAgents[i]
+      print "enemyPosList[i]", enemyPosList[i]
+
+      if enemyPosList[i] != None:
+        self.setParticlesToReality(gameState, opponentAgentIndex, enemyPosList[i])
+        particleWeights[self.opponentAgents[i]][enemyPosList[i]].append(1)
 
       #Has Been Eaten
-      if hasBeenEaten:
+      elif hasBeenEaten:
         jailPos = gameState.getInitialAgentPosition(self.opponentAgents[i])
         particleDictionary[self.opponentAgents[i]][jailPos] = 1
-        
+        print "has been eaten"
 
+      elif self.jailTimer[self.opponentAgents[i]] > 0:
+        whereOnJailPath = self.setParticlesToJailTimer(gameState, self.opponentAgents[i], currentAgentIndex) #returns where on jail path
+        particleDictionary[self.opponentAgents[i]][whereOnJailPath] = 1
+        print "still in jailTimer"
+      
       #Not Eaten
       else:
+        print "else"
         for particleIndex, particle in enumerate(self.particles[self.opponentAgents[i]]):
 
-          if enemyPosList[i] == None:
-            # find the true distance from pacman to the current ghost that we're iterating through
-            trueDistance = util.manhattanDistance(particle, myPos)
-            # weight each particle by the probability of getting to that position (use emission model)
-            # account for our current belief distribution (evidence) at this point in time
-            particleWeights[self.opponentAgents[i]].append(gameState.getDistanceProb(trueDistance, noisyDistances[self.opponentAgents[i]]))
+         
+          # find the true distance from pacman to the current ghost that we're iterating through
+          trueDistance = util.manhattanDistance(particle, myPos)
+          # weight each particle by the probability of getting to that position (use emission model)
+          # account for our current belief distribution (evidence) at this point in time
+          particleWeights[self.opponentAgents[i]].append(gameState.getDistanceProb(trueDistance, noisyDistances[self.opponentAgents[i]]))
 
-          else:
-            #set particles to reality
-            self.particles[self.opponentAgents[i]][particleIndex] = enemyPosList[i]
-            particleWeights[self.opponentAgents[i]].append(1)
-
+          
+            
 
         # now create a counter and count up the particle weights observed
         for index, p in enumerate(self.particles[self.opponentAgents[i]]):
           particleDictionary[self.opponentAgents[i]][p] += particleWeights[self.opponentAgents[i]][index]
 
-        particleDictionary[self.opponentAgents[i]].normalize()
+      #particleDictionary[self.opponentAgents[i]].normalize()
 
 
       #reinitialize if 0 for that set of particles
       if particleDictionary[self.opponentAgents[i]].totalCount() == 0:
+        print "re-init"
         self.initializeParticlesUniformly(gameState, i)
 
       # otherwise, go ahead and resample based on our new beliefs 
       else:
-          
         keys = []
         values = []
-
         # find each key, value pair in our counter
         keys, values = zip(*particleDictionary[self.opponentAgents[i]].items())
         self.particles[self.opponentAgents[i]] = util.nSample(values, keys, self.numParticles)
@@ -511,8 +526,8 @@ class BaseCaptureAgent(CaptureAgent):
     enemyScaredTimes = self.initializeScaredTimes()
     
 
-
-    BaseCaptureAgent.jointInference.initialize(self.ourTeamAgents, self.opponentAgents, gameState, legalPositions, self)
+    if self.ourTeamAgents[0] == self.index:
+      BaseCaptureAgent.jointInference.initialize(self.ourTeamAgents, self.opponentAgents, gameState, legalPositions, self)
 
     self.start = gameState.getAgentPosition(self.index)
 
@@ -540,7 +555,7 @@ class BaseCaptureAgent(CaptureAgent):
     displayDist = self.jointInference.getBeliefDistribution()
     dists = self.jointInference.getBeliefDistribution()
 
-    
+    print "dists", dists
     self.displayDistributionsOverPositions(displayDist)
    
 
@@ -558,7 +573,7 @@ class BaseCaptureAgent(CaptureAgent):
     # self.displayDistributionsOverPositions([sideDist])
 
     self.switch(gameState)
-    
+    print "before alpha Beta"
     action = self.getActionAlphaBeta(gameState, dists, self.index)
     
 
@@ -577,7 +592,7 @@ class BaseCaptureAgent(CaptureAgent):
 
   def getActionAlphaBeta(self, gameState, dists, currentAgentIndex):
     #It's necessarily pacman's turn cause this is at the root 
-    self.DEPTH = 4
+    self.DEPTH = 9
     self.timesUp = False
     self.timesUpfeatureOn = False
     

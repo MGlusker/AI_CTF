@@ -136,7 +136,7 @@ class JointParticleFilter:
   def setParticlesToJailTimer(self, gameState, opponentAgentIndex, currentAgentIndex):
     self.particles[opponentAgentIndex] = []
 
-    whereOnJailPath = self.jailPaths[opponentAgentIndex][-(self.jailTimer[opponentAgentIndex]-1)]
+    whereOnJailPath = self.jailPaths[opponentAgentIndex][-self.jailTimer[opponentAgentIndex]]
 
     for i in range(self.numParticles):
       self.particles[opponentAgentIndex].append(whereOnJailPath)
@@ -260,12 +260,12 @@ class JointParticleFilter:
       hasBeenEaten = self.hasBeenEaten(gameState, self.opponentAgents[i], currentAgentIndex, thisAgent)
       hasBeenEatenList.append(hasBeenEaten)
 
-      if self.jailTimer[self.opponentAgents[i]] != 0 and enemyPosList[i] == None:
+      if self.jailTimer[self.opponentAgents[i]] != 0:
         whereOnJailPath = self.setParticlesToJailTimer(gameState, self.opponentAgents[i], currentAgentIndex) #returns where on jail path
         particleDictionary[self.opponentAgents[i]][whereOnJailPath] = 1
 
       #Has Been Eaten
-      if hasBeenEaten:
+      elif hasBeenEaten:
         jailPos = gameState.getInitialAgentPosition(self.opponentAgents[i])
         particleDictionary[self.opponentAgents[i]][jailPos] = 1
         
@@ -313,32 +313,27 @@ class JointParticleFilter:
       
     return hasBeenEatenList
 
-  def elapseTime(self, gameState, currentAgentIndex):
+  def elapseTime(self, gameState):
     """
     Samples each particle's next state based on its current state and the
     gameState.
     """
-    #print self.particles
-    opponentAgentIndex = currentAgentIndex - 1
+    newParticles = util.Counter()
 
-    if opponentAgentIndex == -1:
-      opponentAgentIndex = 3
+    for i in range(2):
 
-    currentParticleList = self.particles[opponentAgentIndex]
+      newParticles[self.opponentAgents[i]] = []
 
-    self.particles[opponentAgentIndex] = []
+      for oldParticle in self.particles[self.opponentAgents[i]]:
 
-    for oldParticle in currentParticleList:
-
-      newParticle = oldParticle 
-      
-      ourPostDist = self.getOpponentDist(gameState, newParticle, opponentAgentIndex)
-          
-      newParticle = util.sample(ourPostDist)
-      self.particles[opponentAgentIndex].append(tuple(newParticle))
-
-    #print self.particles
-
+        newParticle = oldParticle 
+        
+        ourPostDist = self.getOpponentDist(gameState, newParticle, self.opponentAgents[i])
+            
+        newParticle = util.sample(ourPostDist)
+        newParticles[self.opponentAgents[i]].append(tuple(newParticle))
+    
+    self.particles = newParticles
 
 
   #This methods isonly slightly different from the above get belief distribution method
@@ -373,9 +368,9 @@ class JointParticleFilter:
 
     dist = util.Counter()
 
-    # sidePointDistances = [self.mazeDistanceAgent.getMazeDistance(particle, sidePoint) for sidePoint in self.enemySideList]
-    # minDistToSide = min(sidePointDistances)
-    # closestSidePoint = self.enemySideList[sidePointDistances.index(minDistToSide)]
+    sidePointDistances = [self.mazeDistanceAgent.getMazeDistance(particle, sidePoint) for sidePoint in self.enemySideList]
+    minDistToSide = min(sidePointDistances)
+    closestSidePoint = self.enemySideList[sidePointDistances.index(minDistToSide)]
 
     #ourLegalActions[ourSuccessorsEvalScores.index(max(ourSuccessorsEvalScores))]
 
@@ -396,7 +391,7 @@ class JointParticleFilter:
         print "areWeOnOurSide", self.isOpponentOnTheirSide(particle, gameState)
         dist[particle] = prob
 
-    #dist.normalize()
+    dist.normalize()
     return dist
 
   def div(self, x,y):
@@ -482,15 +477,6 @@ class JointParticleFilter:
     return mySideList
 
 
-
-##########################
-# END PARTICLE FILTERING #
-##########################
-
-
-
-
-
 ################################
 # Baseline Capture Agent Class #
 ################################
@@ -563,7 +549,7 @@ class BaseCaptureAgent(CaptureAgent):
 
     elapseStart = time.time()
 
-    self.jointInference.elapseTime(gameState, self.index)
+    self.jointInference.elapseTime(gameState)
 
     #print "Elapse Filtering time:", time.time() - elapseStart
     ##########################

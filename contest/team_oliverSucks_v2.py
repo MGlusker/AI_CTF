@@ -136,7 +136,7 @@ class JointParticleFilter:
   def setParticlesToJailTimer(self, gameState, opponentAgentIndex, currentAgentIndex):
     self.particles[opponentAgentIndex] = []
 
-    whereOnJailPath = self.jailPaths[opponentAgentIndex][-self.jailTimer[opponentAgentIndex]]
+    whereOnJailPath = self.jailPaths[opponentAgentIndex][-(self.jailTimer[opponentAgentIndex]-1)]
 
     for i in range(self.numParticles):
       self.particles[opponentAgentIndex].append(whereOnJailPath)
@@ -260,12 +260,12 @@ class JointParticleFilter:
       hasBeenEaten = self.hasBeenEaten(gameState, self.opponentAgents[i], currentAgentIndex, thisAgent)
       hasBeenEatenList.append(hasBeenEaten)
 
-      if self.jailTimer[self.opponentAgents[i]] != 0:
+      if self.jailTimer[self.opponentAgents[i]] != 0 and enemyPosList[i] == None:
         whereOnJailPath = self.setParticlesToJailTimer(gameState, self.opponentAgents[i], currentAgentIndex) #returns where on jail path
         particleDictionary[self.opponentAgents[i]][whereOnJailPath] = 1
 
       #Has Been Eaten
-      elif hasBeenEaten:
+      if hasBeenEaten:
         jailPos = gameState.getInitialAgentPosition(self.opponentAgents[i])
         particleDictionary[self.opponentAgents[i]][jailPos] = 1
         
@@ -287,10 +287,7 @@ class JointParticleFilter:
             particleWeights[self.opponentAgents[i]].append(1)
 
 
-
-
         # now create a counter and count up the particle weights observed
-        
         for index, p in enumerate(self.particles[self.opponentAgents[i]]):
           particleDictionary[self.opponentAgents[i]][p] += particleWeights[self.opponentAgents[i]][index]
 
@@ -974,7 +971,7 @@ class BaseCaptureAgent(CaptureAgent):
     #features["scoreOfGame"] = self.getScore(currentGameState)
 
     #print "FS: ", offensiveFoodScore
-    # print "ECS: ", offensiveEnemyClosenessScore
+    # print "ECS: ", offensiveEnemyClosene
     # print "CS: ", offensiveCapsuleScore
     #print "ACTUAL SCORE: ", self.getScore(currentGameState)
     """
@@ -1285,9 +1282,9 @@ class BaseCaptureAgent(CaptureAgent):
     features["defensiveEnemyClosenessScore"] = defensiveEnemyClosenessScore
     #features["scoreOfGame"] = self.getScore(currentGameState)
 
-    print "enemyscore: ", defensiveEnemyClosenessScore
-    print "defensiveFoodScore: ", defensiveFoodScore
-    print "numInvaders", numInvadersScore
+    # print "enemyscore: ", defensiveEnemyClosenessScore
+    # print "defensiveFoodScore: ", defensiveFoodScore
+    # print "numInvaders", numInvadersScore
     """
     print "FOOD: ", defensiveFoodScore
     print "CAPSULE: ", capsuleScore
@@ -1474,7 +1471,7 @@ class BaseCaptureAgent(CaptureAgent):
     for enemy in enemyPositions:
       for position in allPosList:
         if enemy == position:
-          print "ENEMYTYYYYYY"
+          #print "ENEMYTYYYYYY"
           numInvaders += 1
 
 

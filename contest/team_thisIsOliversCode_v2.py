@@ -1054,8 +1054,11 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     """
     enemyScaredTimes = self.enemyScaredTimes
     maxEnemyScaredTime = -float("inf")
+    minEnemyScaredTime = float("inf")
     maxEnemyScaredIndex = 0
     for key, value in enemyScaredTimes.items():
+      if value < float("inf")
+        minEnemyScaredTime = value
       if value > maxEnemyScaredTime:
         maxEnemyScaredIndex = key
         maxEnemyScaredTime = value
@@ -1147,8 +1150,9 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
           #enemyClosenessScore = -100.0 * (1.0/closestEnemyDistance)
 
       # otherwise we ate a pellet so go close to ghost
-      else: 
-        print "wE aTe a pElLeT"
+      # if one both ghosts are avaiable
+      elif maxEnemyScaredTime > 0 and minEnemyScaredTime > 0: 
+        #print "wE aTe a pElLeT"
         #print closestEnemyDistance, "closest dist "
         #if closestEnemyDistance == 0:
 
@@ -1161,8 +1165,10 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
           print "THIS IS HIT ASDFASDKFBLWEIFBWLIEUFBRI B"
           enemyClosenessScore = 100.0
         elif closestEnemyDistance == 1:
+          print "ONE AWAY"
           enemyClosenessScore = 50.0
         else:
+          print "NOT ONE AWAY"
           enemyClosenessScore = 50.0 * (1.0/closestEnemyDistance)
         #else:
         #  enemyClosenessScore = 1000000000.0 * (1.0/closestEnemyDistance)

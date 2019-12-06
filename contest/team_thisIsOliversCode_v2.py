@@ -1087,6 +1087,9 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
     closestRealEnemyPosition = realEnemyPositions[realDistanceToEnemies.index(closestRealEnemyDistance)]
     closestRealEnemyIndex = self.opponentAgents[realDistanceToEnemies.index(closestRealEnemyDistance)]
 
+
+
+
     enemyClosenessScore = 0.0
     
     onMySide = False
@@ -1151,7 +1154,11 @@ class OffensiveCaptureAgent(BaseCaptureAgent):
 
         # if we eat him the new enemy closest distance
         # should be greater than it was before you took that action
-        if (closestEnemyDistance-closestRealEnemyDistance) > 1:
+
+        # if the ghost that was just the closest to you moves far away we must have eaten it 
+        if (distanceToEnemies[closestRealEnemyIndex] - closestRealEnemyDistance) > 4:
+        #if (closestEnemyDistance-closestRealEnemyDistance) > 1:
+          print "THIS IS HIT ASDFASDKFBLWEIFBWLIEUFBRI B"
           enemyClosenessScore = 100.0
         elif closestEnemyDistance == 1:
           enemyClosenessScore = 50.0

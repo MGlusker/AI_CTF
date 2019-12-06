@@ -563,7 +563,7 @@ class BaseCaptureAgent(CaptureAgent):
     #Displays my side List
     # sideDist = self.getMySideDist(self.mySideList)
     # self.displayDistributionsOverPositions([sideDist])
-    self.switch(gameState)
+    #self.switch(gameState)
 
     action = self.getActionAlphaBeta(gameState, dists, self.index)
     
@@ -1091,19 +1091,14 @@ class BaseCaptureAgent(CaptureAgent):
     (unless we're on our own side)
     """
     enemyScaredTimes = self.enemyScaredTimes
-    maxScaredTime = -float("inf")
-    maxScaredIndex = 0
+    maxEnemyScaredTime = -float("inf")
+    maxEnemyScaredIndex = 0
     for key, value in enemyScaredTimes.items():
-      if value > maxScaredTime:
-        maxScaredIndex = key
-        maxScaredTime = value
+      if value > maxEnemyScaredTime:
+        maxEnemyScaredIndex = key
+        maxEnemyScaredTime = value
 
     ourScaredTimes = [gameState.getAgentState(us).scaredTimer for us in self.ourTeamAgents]
-    
-
-    # print "enemy Scared Times: ", enemyScaredTimes
-    # print "max Scared time: ", maxScaredTime
-    
 
     # a boolean telling us if we're on our own side or not
     onMySide = self.areWeOnOurSide(gameState)
@@ -1112,9 +1107,6 @@ class BaseCaptureAgent(CaptureAgent):
     enemyPositions = self.getPositions(gameState, False)
     
     distanceToEnemies = []
-
-    offensiveEnemyClosenessScore = 0.0
-
     # find distance to each enemy
     for enemy in enemyPositions:
       distanceToEnemies.append(self.getMazeDistance(gameState.getAgentPosition(self.index), enemy))
@@ -1122,6 +1114,25 @@ class BaseCaptureAgent(CaptureAgent):
     closestEnemyDistance = min(distanceToEnemies)
 
     
+    # REAL ENEMY POSITIONS
+    myRealPosition = self.getCurrentObservation().getAgentPosition(self.index)
+    realEnemyPositions = self.getPositions(self.getCurrentObservation(), False)
+    realDistanceToEnemies = []
+    
+    for enemy in realEnemyPositions:
+      realDistanceToEnemies.append(self.getMazeDistance(myRealPosition, enemy))
+
+    closestRealEnemyDistance = min(realDistanceToEnemies)
+    closestRealEnemyPosition = realEnemyPositions[realDistanceToEnemies.index(closestRealEnemyDistance)]
+    closestRealEnemyIndex = self.opponentAgents[realDistanceToEnemies.index(closestRealEnemyDistance)]
+
+
+
+    enemyClosenessScore = 0.0
+
+
+
+
     onMySide = False
     # if we're on our side it's good to be close to enemies (UNLESS WE"RE SCARED)
     if onMySide:
@@ -1153,51 +1164,47 @@ class BaseCaptureAgent(CaptureAgent):
       #print enemyScaredTimes
       #if enemyScaredTimes.argMax() == 0:
       #print closestEnemyDistance, "closest DIST"
-      if maxScaredTime == 0:
+      if maxEnemyScaredTime == 0:
         #print "SCARED OF GHOSTS"
         if closestEnemyDistance == 0:
-          #offensiveEnemyClosenessScore = -float('inf')#-1000.0
-          offensiveEnemyClosenessScore = 0 
+          #enemyClosenessScore = -float('inf')#-1000.0
+          enemyClosenessScore = 0 
         elif closestEnemyDistance == 1:
-          offensiveEnemyClosenessScore = 1
+          enemyClosenessScore = 1
         elif closestEnemyDistance == 2:
-          offensiveEnemyClosenessScore = 2
+          enemyClosenessScore = 2
         elif closestEnemyDistance == 3:
-          offensiveEnemyClosenessScore = 3
-        elif closestEnemyDistance == 4:
-          offensiveEnemyClosenessScore = 4
-        elif closestEnemyDistance == 5:
-          offensiveEnemyClosenessScore = 5
+          enemyClosenessScore = 3
+        #elif closestEnemyDistance == 4:
+        #  enemyClosenessScore = 4
+        #elif closestEnemyDistance == 5:
+        #  enemyClosenessScore = 5
         else:
-          offensiveEnemyClosenessScore = 15
+          enemyClosenessScore = 5.0 * (1.0/closestEnemyDistance)
+          #enemyClosenessScore = 5
 
         #else:
-        #  getOffensiveEnemyClosenessScore = 1.0/closestEnemyDistance
+        #  getEnemyClosenessScore = 1.0/closestEnemyDistance
           #enemyClosenessScore = -100.0 * (1.0/closestEnemyDistance)
 
       # otherwise we ate a pellet so go close to ghost
       else: 
         print "wE aTe a pElLeT"
         #print closestEnemyDistance, "closest dist "
-        if closestEnemyDistance == 0:
-          print "EAT HIM!!!!"
-          offensiveEnemyClosenessScore = 100.0
-        elif closestEnemyDistance == 1:
-          offensiveEnemyClosenessScore = 50.0
-        elif closestEnemyDistance == 2:
-          offensiveEnemyClosenessScore = 25.0
-        elif closestEnemyDistance == 3:
-          offensiveEnemyClosenessScore = 15.0
-        elif closestEnemyDistance == 4:
-          offensiveEnemyClosenessScore = 10.0
-        elif closestEnemyDistance == 5:
-          offensiveEnemyClosenessScore = 5.0
-        else:
-          offensiveEnemyClosenessScore = 0.0
-        #else:
-        #  offensiveEnemyClosenessScore = 1000000000.0 * (1.0/closestEnemyDistance)
+        #if closestEnemyDistance == 0:
 
-    return offensiveEnemyClosenessScore
+        # if we eat him the new enemy closest distance
+        # should be greater than it was before you took that action
+        if (closestEnemyDistance-closestRealEnemyDistance) > 1:
+          enemyClosenessScore = 100.0
+        elif closestEnemyDistance == 1:
+          enemyClosenessScore = 50.0
+        else:
+          enemyClosenessScore = 50.0 * (1.0/closestEnemyDistance)
+        #else:
+        #  enemyClosenessScore = 1000000000.0 * (1.0/closestEnemyDistance)
+
+    return enemyClosenessScore
 
 
   #################################

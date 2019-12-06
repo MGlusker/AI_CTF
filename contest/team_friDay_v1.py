@@ -577,7 +577,7 @@ class BaseCaptureAgent(CaptureAgent):
 
     self.updateScaredTimes(action, gameState, hasBeenEatenList)
 
-    #print "Total time:", time.time() - self.start
+    print "Total time:", time.time() - self.start
 
 
     return action
@@ -589,6 +589,7 @@ class BaseCaptureAgent(CaptureAgent):
     self.DEPTH = 4
     self.timesUp = False
     self.timesUpfeatureOn = False
+    self.totalPrunes = 0
     
 
     mostLikelyState = (dists[0].argMax(), dists[1].argMax())
@@ -645,7 +646,9 @@ class BaseCaptureAgent(CaptureAgent):
       v = max([v, self.minRecursiveHelper(child, depthCounter+1, currentAgentIndex+1, alpha, beta, DEPTH)])
 
       if(v > beta) or self.timesUp:
+        self.totalPrunes += 1
         return v
+        
 
       alpha = max([alpha, v])
 
@@ -686,6 +689,7 @@ class BaseCaptureAgent(CaptureAgent):
       v = min([v, self.maxRecursiveHelper(child, depthCounter+1, currentAgentIndex+1, alpha, beta, DEPTH)])
       
       if(v < alpha) or self.timesUp:
+        self.totalPrunes += 1
         return v
     
       beta = min([beta, v])
@@ -760,7 +764,8 @@ class BaseCaptureAgent(CaptureAgent):
     currentJailTimerOne = self.jointInference.jailTimer[self.opponentAgents[0]]
     currentJailTimerTwo = self.jointInference.jailTimer[self.opponentAgents[1]]
 
-
+    numInvaders = self.getNumInvadersScore(gameState)
+    print numInvaders
     
     if self.getScore(gameState) >= 6:#winning by a lot 
       print "both on DEFENSE"
@@ -773,11 +778,18 @@ class BaseCaptureAgent(CaptureAgent):
     else: #somewhere in between 
       self.offensiveBooleans = [True, False]
 
-      if currentJailTimerTwo > 0  or currentJailTimerOne > 0:
+      if numInvaders ==1:
+
+        self.offensiveBooleans = [False, False]
+
+      elif numInvaders ==2:
+        self.offensiveBooleans = [False, False]
+
+      elif currentJailTimerTwo > 0  or currentJailTimerOne > 0:
         print "JAIL so both offense"
         self.offensiveBooleans = [True, True]
 
-
+    print self.offensiveBooleans
     if self.index == self.ourTeamAgents[0]:
       self.isOnOffense =  self.offensiveBooleans[0] #On Offense
     elif self.index == self.ourTeamAgents[1]:
@@ -1199,7 +1211,7 @@ class BaseCaptureAgent(CaptureAgent):
 
         if (distanceToEnemies[closestRealEnemyIndex]-closestRealEnemyDistance) > 6:
         #if (closestEnemyDistance-closestRealEnemyDistance) > 1:
-          print "NO FUCKING WAY *********************"
+          #print "NO FUCKING WAY *********************"
           enemyClosenessScore = 10.0
         
         elif closestEnemyDistance == 0:
@@ -1254,12 +1266,12 @@ class BaseCaptureAgent(CaptureAgent):
         # if we eat a ghost the new enemy closest distance
         # should be greater than it was before you took that action
 
-        print "new enemy closest Distance: ", distanceToEnemies[closestRealEnemyIndex]
-        print "closest real enemy distance: ", closestRealEnemyDistance
+        # print "new enemy closest Distance: ", distanceToEnemies[closestRealEnemyIndex]
+        # print "closest real enemy distance: ", closestRealEnemyDistance
 
         if (distanceToEnemies[closestRealEnemyIndex]-closestRealEnemyDistance) > 6:
         #if (closestEnemyDistance-closestRealEnemyDistance) > 1:
-          print "NO FUCKING WAY *********************"
+          # print "NO FUCKING WAY *********************"
           enemyClosenessScore = 1000.0
         elif closestEnemyDistance == 0:
           enemyClosenessScore = 100.0
@@ -1325,13 +1337,13 @@ class BaseCaptureAgent(CaptureAgent):
     defensiveCapsuleScore = self.getDefensiveCapsuleScore(currentGameState)
     numInvadersScore = self.getNumInvadersScore(currentGameState)
     defensiveEnemyClosenessScore = self.getDefensiveEnemyClosenessScore(currentGameState)
-    #goHomeScore = self.getGoHomeScore(currentGameState)
+    goHomeScore = self.getGoHomeScore(currentGameState)
 
     features["defensiveFoodScore"] = defensiveFoodScore
     features["defensiveCapsuleScore"] = defensiveCapsuleScore
     features["numInvadersScore"] = numInvadersScore
     features["defensiveEnemyClosenessScore"] = defensiveEnemyClosenessScore
-    #features["goHome"] = goHomeScore
+    features["goHome"] = goHomeScore
     features["scoreOfGame"] = self.getScore(currentGameState)
 
     #print "enemyscore: ", defensiveEnemyClosenessScore
@@ -1353,7 +1365,7 @@ class BaseCaptureAgent(CaptureAgent):
     # numInvadersScore is negative if we have invaders, positive if we don't
     # enemyClosenessScore is negative
     # socreOfGame is negative if losing, positive if winning
-    Weights = {"defensiveFoodScore": 1, "defensiveEnemyClosenessScore": 1000, "numInvadersScore": 50,  "defensiveCapsuleScore": 1, "scoreOfGame": 1000}#"goHomeScore": 1, "defensiveCapsuleScore": 1, "scoreOfGame": 1000}#{"defensiveFoodScore": 1000}#, "capsuleScore": 10, "numInvadersScore": 100, "enemyClosenessScore": 100000, "scoreOfGame": 1}
+    Weights = {"defensiveFoodScore": 1, "defensiveEnemyClosenessScore": 1000, "numInvadersScore": -25000,  "defensiveCapsuleScore": 1, "scoreOfGame": 1000, "goHomeScore": 1}# "defensiveCapsuleScore": 1, "scoreOfGame": 1000}#{"defensiveFoodScore": 1000}#, "capsuleScore": 10, "numInvadersScore": 100, "enemyClosenessScore": 100000, "scoreOfGame": 1}
 
       
     return Weights
@@ -1373,7 +1385,7 @@ class BaseCaptureAgent(CaptureAgent):
     score = 0.0
   
     if not onMySide:
-      if minDistanceHome == 0:
+      if myPos in self.mySideList:
         score = 200000000.0
       else:
         score = 100000000.0 * (1.0/minDistanceHome)
@@ -1546,7 +1558,7 @@ class BaseCaptureAgent(CaptureAgent):
 
 
 
-    return numInvaders * -500 
+    return numInvaders 
 
     
 

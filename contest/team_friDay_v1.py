@@ -767,32 +767,26 @@ class BaseCaptureAgent(CaptureAgent):
     numInvaders = self.getNumInvadersScore(gameState)
     print numInvaders
     
-    if self.getScore(gameState) >= 6:#winning by a lot 
+    if self.getScore(gameState) >= 8:#winning by a lot 
       print "both on DEFENSE"
       self.offensiveBooleans = [False, False]
 
-    elif self.getScore(gameState) <= -6: #losing by a lot
+    elif self.getScore(gameState) <= -8: #losing by a lot
       print "both on offense"
       self.offensiveBooleans = [True, True]
 
     else: #somewhere in between 
       self.offensiveBooleans = [True, False]
 
-      if numInvaders ==1:
 
-        self.offensiveBooleans = [False, False]
-
-      elif numInvaders ==2:
-        self.offensiveBooleans = [False, False]
-
-      elif currentJailTimerTwo > 0  or currentJailTimerOne > 0:
+      if currentJailTimerTwo > 0  or currentJailTimerOne > 0:
         print "JAIL so both offense"
         self.offensiveBooleans = [True, True]
 
     print self.offensiveBooleans
-    if self.index == self.ourTeamAgents[0]:
+    if self.index == self.ourTeamAgents[0] and self.areWeOnOurSide(gameState):
       self.isOnOffense =  self.offensiveBooleans[0] #On Offense
-    elif self.index == self.ourTeamAgents[1]:
+    elif self.index == self.ourTeamAgents[1] and self.areWeOnOurSide(gameState):
       self.isOnOffense = self.offensiveBooleans[1]
     
     #print "offensiveBooleans", self.offensiveBooleans
@@ -1013,7 +1007,7 @@ class BaseCaptureAgent(CaptureAgent):
     # capsuleScore is positive
     # offensiveEnemyClosenessScore is negative
     # socreOfGame is negative if losing, positive if winning
-    Weights = {"offensiveFoodScore": 1, "offensiveEnemyClosenessScore": 1, "offensiveCapsuleScore": 100, "scoreOfGame": 1000}
+    Weights = {"offensiveFoodScore": 1, "offensiveEnemyClosenessScore": 50, "offensiveCapsuleScore": 100, "scoreOfGame": 1000}
 
       
     return Weights
@@ -1059,7 +1053,7 @@ class BaseCaptureAgent(CaptureAgent):
 
     # first check to see if our agent is carrying 2 food (or more) 
     # and there's no other food close by, then incentivize going home (to our side)
-    elif gameState.getAgentState(self.index).numCarrying >= 2: #and closestFoodDistance > 2:
+    elif gameState.getAgentState(self.index).numCarrying >= 2 : #and closestFoodDistance > 2:
       #print "CARRYING MORE THAN 2:", closestFoodDistance
       offensiveFoodScore = 100000000.0 * (1.0/minDistanceHome)
       
@@ -1326,7 +1320,7 @@ class BaseCaptureAgent(CaptureAgent):
 
     #ourPositions = self.getPositions(currentGameState, True)
     #enemyPositions = self.getPositions(currentGameState, False)
-    
+    onMySide = self.areWeOnOurSide(self.getCurrentObservation())
     
     
     #currentEnemyScaredTimes = [enemyState.scaredTimer for enemyState in enemyCurrentStates]
@@ -1337,14 +1331,25 @@ class BaseCaptureAgent(CaptureAgent):
     defensiveCapsuleScore = self.getDefensiveCapsuleScore(currentGameState)
     numInvadersScore = self.getNumInvadersScore(currentGameState)
     defensiveEnemyClosenessScore = self.getDefensiveEnemyClosenessScore(currentGameState)
-    goHomeScore = self.getGoHomeScore(currentGameState)
+    #goHomeScore = self.getGoHomeScore(currentGameState)
 
-    features["defensiveFoodScore"] = defensiveFoodScore
-    features["defensiveCapsuleScore"] = defensiveCapsuleScore
-    features["numInvadersScore"] = numInvadersScore
-    features["defensiveEnemyClosenessScore"] = defensiveEnemyClosenessScore
-    features["goHome"] = goHomeScore
-    features["scoreOfGame"] = self.getScore(currentGameState)
+    
+    if onMySide:
+
+      features["defensiveFoodScore"] = defensiveFoodScore
+      features["defensiveCapsuleScore"] = defensiveCapsuleScore
+      features["numInvadersScore"] = numInvadersScore
+      features["defensiveEnemyClosenessScore"] = defensiveEnemyClosenessScore
+      features["scoreOfGame"] = self.getScore(currentGameState)
+      #features["goHome"] = 0
+    else:
+      #features["goHome"] = goHomeScore
+      features["defensiveFoodScore"] = 0
+      features["defensiveCapsuleScore"] = 0
+      features["numInvadersScore"] = 0
+      features["defensiveEnemyClosenessScore"] = 0
+      features["scoreOfGame"] = self.getScore(currentGameState)
+
 
     #print "enemyscore: ", defensiveEnemyClosenessScore
     #print "defensiveFoodScore: ", defensiveFoodScore
@@ -1365,7 +1370,7 @@ class BaseCaptureAgent(CaptureAgent):
     # numInvadersScore is negative if we have invaders, positive if we don't
     # enemyClosenessScore is negative
     # socreOfGame is negative if losing, positive if winning
-    Weights = {"defensiveFoodScore": 1, "defensiveEnemyClosenessScore": 1000, "numInvadersScore": -25000,  "defensiveCapsuleScore": 1, "scoreOfGame": 1000, "goHomeScore": 1}# "defensiveCapsuleScore": 1, "scoreOfGame": 1000}#{"defensiveFoodScore": 1000}#, "capsuleScore": 10, "numInvadersScore": 100, "enemyClosenessScore": 100000, "scoreOfGame": 1}
+    Weights = {"defensiveFoodScore": 1, "defensiveEnemyClosenessScore": 1000, "numInvadersScore": -25000,  "defensiveCapsuleScore": 1, "scoreOfGame": 1000}# "goHomeScore": 1# "defensiveCapsuleScore": 1, "scoreOfGame": 1000}#{"defensiveFoodScore": 1000}#, "capsuleScore": 10, "numInvadersScore": 100, "enemyClosenessScore": 100000, "scoreOfGame": 1}
 
       
     return Weights
@@ -1373,22 +1378,23 @@ class BaseCaptureAgent(CaptureAgent):
   #######################################
   ## helper methods for feature scores ##
   #######################################
-  def getGoHomeScore(self, gameState):
+  # def getGoHomeScore(self, gameState):
     
-    myPos = gameState.getAgentPosition(self.index)
-    minDistanceHome = min([self.getMazeDistance(myPos, position) for position in self.mySideList])
+  #   myPos = gameState.getAgentPosition(self.index)
+  #   minDistanceHome = min([self.getMazeDistance(myPos, position) for position in self.mySideList])
 
-    
 
-    onMySide = self.areWeOnOurSide(self.getCurrentObservation())
+  #   onMySide = self.areWeOnOurSide(self.getCurrentObservation())
     
-    score = 0.0
+  #   score = 0.0
   
-    if not onMySide:
-      if myPos in self.mySideList:
-        score = 200000000.0
-      else:
-        score = 100000000.0 * (1.0/minDistanceHome)
+    
+  #   if myPos in self.mySideList:
+  #     print "im home "
+  #     score = 20000000000.0
+  #   else:
+  #     print "I wanna go home"
+  #     score = 100000000.0 * (1.0/minDistanceHome)
 
     return score
   

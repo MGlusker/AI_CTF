@@ -54,7 +54,7 @@ class JointParticleFilter:
   positions.
   """
 
-  def __init__(self, numParticles=300):
+  def __init__(self, numParticles=500):
       #NOTE: numParticles is the number of particles per set of particles
       #total particles is 2*numParticles
       self.setNumParticles(numParticles)
@@ -577,7 +577,7 @@ class BaseCaptureAgent(CaptureAgent):
 
     self.updateScaredTimes(action, gameState, hasBeenEatenList)
 
-    #print "Total time:", time.time() - self.start
+    print "Total time:", time.time() - self.start
     #print ""
 
     return action
@@ -588,7 +588,7 @@ class BaseCaptureAgent(CaptureAgent):
     #It's necessarily pacman's turn cause this is at the root 
     self.DEPTH = 4
     self.timesUp = False
-    self.timesUpfeatureOn = False
+    self.timesUpfeatureOn = True
     self.totalPrunes = 0
     
 

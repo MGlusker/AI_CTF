@@ -1317,10 +1317,10 @@ class BaseCaptureAgent(CaptureAgent):
           enemyClosenessScore = 2
         elif closestEnemyDistance == 3:
           enemyClosenessScore = 3
-        elif closestEnemyDistance > 3 and closestEnemyDistance < 7:      
-          enemyClosenessScore = 5
+        #elif closestEnemyDistance > 3 and closestEnemyDistance < 7:      
+        #  enemyClosenessScore = 5
         else:
-          enemyClosenessScore = 10
+          enemyClosenessScore = 5
         
 
 
@@ -1605,7 +1605,8 @@ class BaseCaptureAgent(CaptureAgent):
     #print "ONMYSIDE"
     
     # if we're not scared of any enemies try to get close
-      if max(ourScaredTimes) == 0:
+      #if max(ourScaredTimes) == 0:
+      if True:
         #print "EAT GHOST"
         # if we eat the enemy
         #print "distance that will happen", distanceToEnemies[closestRealEnemyIndex]

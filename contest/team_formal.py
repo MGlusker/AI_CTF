@@ -1235,7 +1235,7 @@ class BaseCaptureAgent(CaptureAgent):
 
 
 
-    onMySide = False
+    #onMySide = False
     # if we're on our side it's good to be close to enemies (UNLESS WE"RE SCARED)
     if onMySide:
       
@@ -1278,8 +1278,8 @@ class BaseCaptureAgent(CaptureAgent):
     else:
     
 
-      # if both ghosts are scared
-      if maxEnemyScaredTime > 0 and minEnemyScaredTime > 0: 
+      # if either ghost is scared
+      if maxEnemyScaredTime > 0 or minEnemyScaredTime > 0: 
         
         # then ignore ghosts all together 
         # then this is good!
